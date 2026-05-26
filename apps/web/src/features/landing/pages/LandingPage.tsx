@@ -42,9 +42,9 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="editorial relative grid grid-cols-12 gap-x-6 gap-y-10 py-12 md:gap-y-16 md:py-20">
+        <div className="editorial relative grid grid-cols-12 gap-x-8 gap-y-10 py-12 md:gap-y-16 md:py-20">
           {/* LEFT — display title */}
-          <div className="col-span-12 lg:col-span-7 stagger">
+          <div className="col-span-12 lg:col-span-6 stagger">
             <p className="eyebrow">Manual del origen familiar</p>
 
             <h1 className="mt-6 font-display text-display-xl font-light text-ink-900 text-balance">
@@ -91,18 +91,19 @@ export function LandingPage() {
           </div>
 
           {/* RIGHT — video plate */}
-          <div className="relative col-span-12 lg:col-span-5">
+          <div className="relative col-span-12 lg:col-span-6">
             {/* Index number */}
-            <div className="absolute -left-2 -top-6 font-display text-[120px] font-light leading-none text-paper-300 md:-left-4 md:text-[160px]">
+            <div className="absolute -left-2 -top-8 font-display text-[140px] font-light leading-none text-paper-300 md:-left-6 md:text-[200px]">
               01
             </div>
 
             <div className="relative">
-              {/* Frame */}
-              <div className="relative overflow-hidden rounded-sm border border-ink-900/15 bg-ink-950">
+              {/* Frame — caja generosa que se adapta al video completo */}
+              <div className="relative overflow-hidden rounded-sm border border-ink-900/15 bg-ink-950 shadow-paper-lg">
                 <video
                   ref={videoRef}
-                  className="aspect-[4/5] w-full object-cover"
+                  className="block w-full"
+                  style={{ maxHeight: '70vh', minHeight: '420px', objectFit: 'contain' }}
                   src={`${import.meta.env.BASE_URL}intro.mp4#t=2`}
                   autoPlay
                   muted
@@ -110,8 +111,8 @@ export function LandingPage() {
                   playsInline
                   preload="metadata"
                 />
-                {/* Vignette overlay */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/40 via-transparent to-ink-950/10" />
+                {/* Vignette overlay sutil */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/30 via-transparent to-transparent" />
                 {/* Corner caption */}
                 <div className="pointer-events-none absolute bottom-4 left-4 right-4 flex items-end justify-between text-paper-50">
                   <p className="font-display text-sm italic">Fig. I — Origen</p>
