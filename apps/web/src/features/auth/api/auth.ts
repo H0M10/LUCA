@@ -15,4 +15,16 @@ export const login = (input: LoginInput) =>
 
 export const logout = () => http<void>('/api/auth/logout', { method: 'POST' });
 
-export const me = () => http<{ data: UserPublic }>('/api/auth/me').then((r) => r.data);
+/**
+ * Devuelve el usuario actual o null si no hay sesión (401).
+ * No queremos que React Query trate "no logueado" como ERROR — es un estado válido.
+ */
+export const me = async (): Promise<UserPublic | null> => {
+  try {
+    const r = await http<{ data: UserPublic }>('/api/auth/me');
+    return r.data;
+  } catch (e) {
+    if ((e as { status?: number }).status === 401) return null;
+    throw e;
+  }
+};
