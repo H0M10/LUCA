@@ -67,7 +67,7 @@ export const addPerson = (treeId: string, input: PersonCreateInput) =>
     body: JSON.stringify(input),
   }).then((r) => r.data);
 
-export const updatePerson = (id: string, input: PersonCreateInput) =>
+export const updatePerson = (id: string, input: Partial<PersonCreateInput> & { bloodType?: string; notes?: string }) =>
   http<{ data: PersonDto }>(`/api/persons/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
