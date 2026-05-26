@@ -51,11 +51,11 @@ export async function registerUser(input: RegisterInput, meta: { ip?: string; ua
       expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
     },
   });
-  await sendMail({
-    to: user.email,
-    subject: 'Verifica tu cuenta en Luca',
-    html: `<p>Hola ${user.full_name},</p><p>Confirma tu cuenta con este código: <code>${raw}</code></p>`,
-  });
+  const { env } = await import('../../config/env.js');
+  const { verifyEmailTemplate } = await import('../../lib/mailer.js');
+  const verifyLink = `${env.FRONTEND_URL}/#/verify?token=${raw}`;
+  const tmpl = verifyEmailTemplate(user.full_name, verifyLink);
+  await sendMail({ to: user.email, toName: user.full_name, subject: tmpl.subject, html: tmpl.html });
 
   const tokens = await issueTokens(user.id, user.role as 'user' | 'admin', meta);
   return { user: toPublic(user), tokens };

@@ -20,11 +20,10 @@ const EnvSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
-  SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.coerce.number().optional(),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASS: z.string().optional(),
-  MAIL_FROM: z.string().optional(),
+  BREVO_API_KEY: z.string().optional(),
+  MAIL_FROM_NAME: z.string().default('Luca'),
+  MAIL_FROM_EMAIL: z.string().optional(),
+  FRONTEND_URL: z.string().default('https://h0m10.github.io/LUCA'),
   STORAGE_DIR: z.string().default('./storage'),
 });
 

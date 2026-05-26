@@ -6,6 +6,7 @@ import { useRegister } from '../hooks/useAuth.js';
 import { Button, ErrorAlert, Field, Input } from '../../../shared/components/ui.js';
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
+import { GoogleButton } from '../components/GoogleButton.js';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -47,6 +48,12 @@ export function RegisterPage() {
 
           <div className="col-span-12 md:col-span-7 lg:col-span-7 lg:col-start-6">
             <div className="max-w-md">
+              <GoogleButton label="Registrarme con Google" />
+              <div className="my-8 flex items-center gap-4 text-xs uppercase tracking-widest text-ink-300">
+                <span className="h-px flex-1 bg-paper-300" />
+                <span>o con correo</span>
+                <span className="h-px flex-1 bg-paper-300" />
+              </div>
               <form onSubmit={handleSubmit((d) => mutate(d, { onSuccess: () => navigate('/dashboard') }))} className="space-y-8">
                 <Field number="01" label="Nombre completo" error={errors.fullName?.message}>
                   <Input autoComplete="name" placeholder="María Eugenia Pérez" {...register('fullName')} />

@@ -7,6 +7,7 @@ import { Button, ErrorAlert, Field, Input } from '../../../shared/components/ui.
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
 import { Branch } from '../../../shared/brand/Logo.js';
+import { GoogleButton } from '../components/GoogleButton.js';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -36,6 +37,12 @@ export function LoginPage() {
           {/* Right — form */}
           <div className="col-span-12 md:col-span-7 lg:col-span-7 lg:col-start-6">
             <div className="max-w-md">
+              <GoogleButton />
+              <div className="my-8 flex items-center gap-4 text-xs uppercase tracking-widest text-ink-300">
+                <span className="h-px flex-1 bg-paper-300" />
+                <span>o con correo</span>
+                <span className="h-px flex-1 bg-paper-300" />
+              </div>
               <form onSubmit={handleSubmit((d) => mutate(d, { onSuccess: () => navigate('/dashboard') }))} className="space-y-8">
                 <Field number="01" label="Correo electrónico" error={errors.email?.message}>
                   <Input type="email" autoComplete="email" placeholder="tu@correo.com" {...register('email')} />
