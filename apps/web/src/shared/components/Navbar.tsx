@@ -34,9 +34,9 @@ export function Navbar() {
           ) : (
             <>
               <NavItem to="/" end>Inicio</NavItem>
-              <HashItem href="/#nosotros">Nosotros</HashItem>
-              <HashItem href="/#valores">Valores</HashItem>
-              <HashItem href="/#metodo">Método</HashItem>
+              <HashItem to="/#nosotros">Nosotros</HashItem>
+              <HashItem to="/#valores">Valores</HashItem>
+              <HashItem to="/#metodo">Método</HashItem>
             </>
           )}
         </div>
@@ -92,9 +92,9 @@ export function Navbar() {
             ) : (
               <>
                 <MobileLink to="/" onClick={() => setOpen(false)}>Inicio</MobileLink>
-                <a href="/#nosotros" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Nosotros</a>
-                <a href="/#valores" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Valores</a>
-                <a href="/#metodo" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Método</a>
+                <Link to="/#nosotros" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Nosotros</Link>
+                <Link to="/#valores" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Valores</Link>
+                <Link to="/#metodo" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Método</Link>
                 <div className="mt-4 flex flex-col gap-2 border-t border-paper-300 pt-4">
                   <Link to="/login" onClick={() => setOpen(false)} className="text-base font-medium text-ink-700">Entrar</Link>
                   <Link
@@ -128,11 +128,11 @@ function NavItem({ to, end, children }: { to: string; end?: boolean; children: R
   );
 }
 
-function HashItem({ href, children }: { href: string; children: React.ReactNode }) {
+function HashItem({ to, children }: { to: string; children: React.ReactNode }) {
   return (
-    <a href={href} className="link-underline font-sans text-sm text-ink-500 hover:text-ink-900">
+    <Link to={to} className="link-underline font-sans text-sm text-ink-500 hover:text-ink-900">
       {children}
-    </a>
+    </Link>
   );
 }
 

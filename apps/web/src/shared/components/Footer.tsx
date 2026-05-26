@@ -31,15 +31,15 @@ export function Footer() {
             <ul className="space-y-2 font-sans text-sm">
               <li><Link to="/register" className="text-ink-700 hover:text-moss-700">Empezar</Link></li>
               <li><Link to="/login" className="text-ink-700 hover:text-moss-700">Entrar</Link></li>
-              <li><a href="/#metodo" className="text-ink-700 hover:text-moss-700">Método</a></li>
+              <li><Link to="/#metodo" className="text-ink-700 hover:text-moss-700">Método</Link></li>
             </ul>
           </div>
 
           <div className="md:col-span-2">
             <h4 className="eyebrow mb-4">Empresa</h4>
             <ul className="space-y-2 font-sans text-sm">
-              <li><a href="/#nosotros" className="text-ink-700 hover:text-moss-700">Nosotros</a></li>
-              <li><a href="/#valores" className="text-ink-700 hover:text-moss-700">Valores</a></li>
+              <li><Link to="/#nosotros" className="text-ink-700 hover:text-moss-700">Nosotros</Link></li>
+              <li><Link to="/#valores" className="text-ink-700 hover:text-moss-700">Valores</Link></li>
             </ul>
           </div>
 

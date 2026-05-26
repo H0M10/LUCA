@@ -103,7 +103,7 @@ export function LandingPage() {
                 <video
                   ref={videoRef}
                   className="aspect-[4/5] w-full object-cover"
-                  src="/intro.mp4#t=2"
+                  src={`${import.meta.env.BASE_URL}intro.mp4#t=2`}
                   autoPlay
                   muted
                   loop
