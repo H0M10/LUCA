@@ -13,8 +13,17 @@ export function LandingPage() {
     const skipIntro = () => {
       if (v.currentTime < 2) v.currentTime = 2;
     };
+    const onTimeUpdate = () => {
+      if (v.currentTime < 1.9) v.currentTime = 2;
+    };
     v.addEventListener('loadedmetadata', skipIntro);
-    return () => v.removeEventListener('loadedmetadata', skipIntro);
+    v.addEventListener('seeked', skipIntro);
+    v.addEventListener('timeupdate', onTimeUpdate);
+    return () => {
+      v.removeEventListener('loadedmetadata', skipIntro);
+      v.removeEventListener('seeked', skipIntro);
+      v.removeEventListener('timeupdate', onTimeUpdate);
+    };
   }, []);
 
   return (

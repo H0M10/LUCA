@@ -1,35 +1,18 @@
 /**
- * Logo Luca — monograma estilo placa heráldica.
- * "L" en serifa con un brote orgánico que sugiere genealogía/raíz.
+ * Logo Luca — usa el PNG real proporcionado por el cliente.
+ * En fondos oscuros se aplica filtro CSS para que el logo (oscuro) aparezca blanco.
  */
 export function Logo({ className = 'h-10 w-10', tone = 'dark' }: { className?: string; tone?: 'dark' | 'light' }) {
-  const bg = tone === 'dark' ? '#1F1A14' : '#FBF8F1';
-  const fg = tone === 'dark' ? '#D9B679' : '#1F1A14';
-  const accent = tone === 'dark' ? '#8FA589' : '#3D5240';
+  const base = import.meta.env.BASE_URL;
+  const filter = tone === 'light' ? 'brightness-0 invert' : '';
   return (
-    <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" className={className} aria-label="Luca">
-      <rect x="2" y="2" width="76" height="76" rx="2" fill={bg} />
-      <rect x="2" y="2" width="76" height="76" rx="2" fill="none" stroke={fg} strokeOpacity="0.25" strokeWidth="0.5" />
-      <rect x="6" y="6" width="68" height="68" rx="1" fill="none" stroke={fg} strokeOpacity="0.4" strokeWidth="0.5" />
-
-      {/* L with serif terminals */}
-      <path
-        d="M 26 18 L 26 56 L 54 56 L 54 51 L 32 51 L 32 18 Z M 22 18 L 36 18 L 36 22 L 28 22 L 28 51 L 54 51 L 54 60 L 22 60 Z"
-        fill={fg}
-      />
-      {/* Roots/branch — subtle organic curve */}
-      <path
-        d="M 40 36 C 44 34, 48 36, 50 32 M 40 36 C 36 34, 32 36, 30 32 M 40 36 L 40 30"
-        stroke={accent}
-        strokeWidth="0.8"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.9"
-      />
-      <circle cx="40" cy="30" r="1.2" fill={accent} />
-      <circle cx="50" cy="32" r="1" fill={accent} />
-      <circle cx="30" cy="32" r="1" fill={accent} />
-    </svg>
+    <img
+      src={`${base}logo.png`}
+      alt="Luca"
+      className={`${className} object-contain ${filter}`}
+      loading="eager"
+      decoding="async"
+    />
   );
 }
 
