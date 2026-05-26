@@ -77,7 +77,7 @@ export function LandingPage() {
                   to="/dashboard"
                   className="group inline-flex items-center gap-3 rounded-full bg-moss-700 px-7 py-3.5 font-sans text-base font-medium text-paper-50 transition hover:bg-moss-800"
                 >
-                  Ir a mis árboles
+                  Ir a mi árbol
                   <span className="transition-transform group-hover:translate-x-1">→</span>
                 </Link>
               ) : (
@@ -326,7 +326,7 @@ export function LandingPage() {
                     to="/dashboard"
                     className="group inline-flex items-center gap-3 rounded-full bg-paper-50 px-8 py-4 font-sans text-base font-medium text-ink-900 transition hover:bg-sand-500"
                   >
-                    Ir a mis árboles
+                    Ir a mi árbol
                     <span className="transition-transform group-hover:translate-x-1">→</span>
                   </Link>
                   <Link to="/profile" className="link-underline font-sans text-base text-paper-100">

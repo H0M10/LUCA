@@ -129,8 +129,11 @@ export function GenogramView({
           stroke="#3D5240"
           strokeWidth="1.5"
           fill="none"
-          className="animate-draw-line"
-          strokeDasharray="500"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="animate-draw-path"
+          strokeDasharray="1000"
+          style={{ animationDelay: '0.4s' }}
         />
       );
     });
@@ -154,8 +157,10 @@ export function GenogramView({
           y2={y}
           stroke={isEnded ? '#C2613A' : '#3D5240'}
           strokeWidth="1.5"
-          strokeDasharray={isEnded ? '6 4' : undefined}
-          className="animate-draw-line"
+          strokeDasharray={isEnded ? '6 4' : '500'}
+          strokeLinecap="round"
+          className="animate-draw-path"
+          style={{ animationDelay: '0.3s' }}
         />
       );
     });
@@ -191,10 +196,10 @@ export function GenogramView({
             <g
               key={p.id}
               transform={`translate(${pos.x}, ${pos.y})`}
-              className="animate-fade-up"
-              style={{ animationDelay: `${0.1 + i * 0.05}s` }}
+              className="animate-grow-in"
+              style={{ animationDelay: `${0.15 + i * 0.08}s`, transformBox: 'fill-box', transformOrigin: 'center' }}
             >
-              <foreignObject width={NODE_W} height={NODE_H}>
+              <foreignObject width={NODE_W} height={NODE_H} style={{ overflow: 'visible' }}>
                 <PersonNode
                   person={p}
                   isTarget={isTarget}
@@ -253,12 +258,14 @@ function PersonNode({
   const dead = !!person.deathDate;
   return (
     <div
-      className={`group relative h-full w-full border bg-paper-50 transition ${
+      className={`group relative h-full w-full cursor-pointer border bg-paper-50 transition-all duration-300 ease-out ${
         isTarget
-          ? 'cursor-pointer border-moss-700 shadow-moss'
+          ? 'border-moss-700 shadow-moss'
           : isSource
             ? 'border-clay-500 ring-2 ring-clay-300'
-            : 'border-paper-300 hover:border-ink-900 hover:shadow-paper-lg'
+            : person.isProband
+              ? 'border-ink-900 ring-1 ring-moss-700/30 animate-breath hover:-translate-y-0.5 hover:shadow-paper-lg'
+              : 'border-paper-300 hover:-translate-y-0.5 hover:border-ink-900 hover:shadow-paper-lg'
       }`}
     >
       {isTarget && (

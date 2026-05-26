@@ -29,7 +29,7 @@ export function Navbar() {
         <div className="hidden items-center gap-8 md:flex">
           {me ? (
             <>
-              <NavItem to="/dashboard">Mis árboles</NavItem>
+              <NavItem to="/dashboard">Mi árbol</NavItem>
               <NavItem to="/profile">Perfil</NavItem>
             </>
           ) : (
@@ -81,7 +81,7 @@ export function Navbar() {
           <div className="editorial flex flex-col gap-4 py-6">
             {me ? (
               <>
-                <MobileLink to="/dashboard" onClick={() => setOpen(false)}>Mis árboles</MobileLink>
+                <MobileLink to="/dashboard" onClick={() => setOpen(false)}>Mi árbol</MobileLink>
                 <MobileLink to="/profile" onClick={() => setOpen(false)}>Perfil</MobileLink>
               </>
             ) : (
