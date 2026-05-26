@@ -12,7 +12,8 @@
     "api:dev": "pnpm --filter @genograma/api dev",
     "web:dev": "pnpm --filter @genograma/web dev",
     "db:pull": "pnpm --filter @genograma/api db:pull",
-    "db:generate": "pnpm --filter @genograma/api db:generate"
+    "db:generate": "pnpm --filter @genograma/api db:generate",
+    "render:build": "pnpm install --frozen-lockfile && pnpm --filter @genograma/shared build && pnpm --filter @genograma/api db:generate && pnpm --filter @genograma/api build"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
