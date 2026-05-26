@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Logo, Wordmark } from '../brand/Logo.js';
-import { useMe } from '../../features/auth/hooks/useAuth.js';
+import { useLogout, useMe } from '../../features/auth/hooks/useAuth.js';
+import { toast } from '../stores/toast.js';
 
 export function Navbar() {
   const { data: me } = useMe();
@@ -43,13 +44,7 @@ export function Navbar() {
 
         <div className="hidden items-center gap-3 md:flex">
           {me ? (
-            <Link
-              to="/profile"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-ink-900 bg-ink-900 font-display text-base font-medium text-paper-50 transition hover:bg-moss-700 hover:border-moss-700"
-              title={me.fullName}
-            >
-              {me.fullName?.[0]?.toUpperCase() ?? '?'}
-            </Link>
+            <AvatarMenu name={me.fullName} email={me.email} />
           ) : (
             <>
               <Link to="/login" className="link-underline font-sans text-sm font-medium text-ink-700">
@@ -141,5 +136,70 @@ function MobileLink({ to, onClick, children }: { to: string; onClick: () => void
     <Link to={to} onClick={onClick} className="font-display text-2xl text-ink-900">
       {children}
     </Link>
+  );
+}
+
+function AvatarMenu({ name, email }: { name: string; email: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const logout = useLogout();
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-ink-900 bg-ink-900 font-display text-base font-medium text-paper-50 transition hover:bg-moss-700 hover:border-moss-700"
+        title={name}
+      >
+        {name?.[0]?.toUpperCase() ?? '?'}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-64 animate-scale-in origin-top-right border border-paper-300 bg-paper-50 shadow-paper-lg">
+          <div className="border-b border-paper-300 px-4 py-3">
+            <p className="font-display text-base font-medium text-ink-900">{name}</p>
+            <p className="truncate font-sans text-xs text-ink-500">{email}</p>
+          </div>
+          <Link
+            to="/dashboard"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2.5 font-sans text-sm text-ink-700 transition hover:bg-paper-100 hover:text-ink-900"
+          >
+            Mi árbol
+          </Link>
+          <Link
+            to="/profile"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2.5 font-sans text-sm text-ink-700 transition hover:bg-paper-100 hover:text-ink-900"
+          >
+            Perfil
+          </Link>
+          <div className="border-t border-paper-300" />
+          <button
+            onClick={() => {
+              setOpen(false);
+              logout.mutate(undefined, {
+                onSuccess: () => {
+                  toast.info('Sesión cerrada');
+                  navigate('/');
+                },
+              });
+            }}
+            className="block w-full px-4 py-2.5 text-left font-sans text-sm text-clay-600 transition hover:bg-clay-100 hover:text-clay-700"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

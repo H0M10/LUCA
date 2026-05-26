@@ -41,6 +41,16 @@ export async function registerUser(input: RegisterInput, meta: { ip?: string; ua
     data: { email: input.email, password_hash, full_name: input.fullName },
   });
 
+  // Auto-crear el árbol personal del usuario
+  const firstName = input.fullName.split(' ')[0] ?? input.fullName;
+  await prisma.tree.create({
+    data: {
+      owner_user_id: user.id,
+      name: `Árbol de ${firstName}`,
+      description: 'Tu árbol genealógico personal',
+    },
+  });
+
   // Token de verificación de email
   const raw = randomToken();
   await prisma.auth_token.create({

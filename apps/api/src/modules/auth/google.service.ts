@@ -66,6 +66,15 @@ export async function findOrCreateGoogleUser(payload: TokenPayload) {
         },
       },
     });
+    // Auto-crear el árbol personal del usuario nuevo
+    const first = fullName.split(' ')[0] ?? fullName;
+    await prisma.tree.create({
+      data: {
+        owner_user_id: user.id,
+        name: `Árbol de ${first}`,
+        description: 'Tu árbol genealógico personal',
+      },
+    });
   }
 
   if (user.status !== 'active') throw Errors.forbidden('Cuenta suspendida');

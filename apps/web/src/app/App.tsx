@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { Providers } from './providers.js';
 import { RequireAuth } from './RequireAuth.js';
+import { RedirectIfAuth } from './RedirectIfAuth.js';
 import { LandingPage } from '../features/landing/pages/LandingPage.js';
 import { NotFoundPage } from '../features/landing/pages/NotFoundPage.js';
 import { LoginPage } from '../features/auth/pages/LoginPage.js';
@@ -15,8 +16,8 @@ export function App() {
     <Providers>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<RedirectIfAuth><LoginPage /></RedirectIfAuth>} />
+        <Route path="/register" element={<RedirectIfAuth><RegisterPage /></RedirectIfAuth>} />
         <Route
           path="/dashboard"
           element={
