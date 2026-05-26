@@ -84,3 +84,37 @@ export const addRelationship = (input: RelationshipCreateInput) =>
 
 export const deleteRelationship = (id: string) =>
   http<void>(`/api/relationships/${id}`, { method: 'DELETE' });
+
+// ───────── Miembros / compartir ─────────
+
+export interface TreeMember {
+  id: string;
+  userId: string;
+  email: string;
+  fullName: string;
+  permission: 'read' | 'edit' | 'admin';
+  acceptedAt?: string | null;
+}
+
+export interface TreeMembership {
+  owner: { id: string; email: string; fullName: string } | null;
+  members: TreeMember[];
+}
+
+export const listMembers = (treeId: string) =>
+  http<{ data: TreeMembership }>(`/api/trees/${treeId}/members`).then((r) => r.data);
+
+export const inviteMember = (treeId: string, email: string, permission: 'read' | 'edit' | 'admin') =>
+  http<{ data: TreeMember }>(`/api/trees/${treeId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ email, permission }),
+  }).then((r) => r.data);
+
+export const removeMember = (treeId: string, memberId: string) =>
+  http<void>(`/api/trees/${treeId}/members/${memberId}`, { method: 'DELETE' });
+
+export const updateMember = (treeId: string, memberId: string, permission: 'read' | 'edit' | 'admin') =>
+  http<void>(`/api/trees/${treeId}/members/${memberId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ permission }),
+  });
