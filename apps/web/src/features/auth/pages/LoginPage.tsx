@@ -8,6 +8,7 @@ import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
 import { Branch } from '../../../shared/brand/Logo.js';
 import { GoogleButton } from '../components/GoogleButton.js';
+import { toast } from '../../../shared/stores/toast.js';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -43,7 +44,17 @@ export function LoginPage() {
                 <span>o con correo</span>
                 <span className="h-px flex-1 bg-paper-300" />
               </div>
-              <form onSubmit={handleSubmit((d) => mutate(d, { onSuccess: () => navigate('/dashboard') }))} className="space-y-8">
+              <form
+                onSubmit={handleSubmit((d) =>
+                  mutate(d, {
+                    onSuccess: (user) => {
+                      toast.success(`Bienvenido, ${user.fullName.split(' ')[0]}`);
+                      navigate('/dashboard');
+                    },
+                  }),
+                )}
+                className="space-y-8"
+              >
                 <Field number="01" label="Correo electrónico" error={errors.email?.message}>
                   <Input type="email" autoComplete="email" placeholder="tu@correo.com" {...register('email')} />
                 </Field>

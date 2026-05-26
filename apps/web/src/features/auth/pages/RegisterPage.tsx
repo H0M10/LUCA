@@ -7,6 +7,7 @@ import { Button, ErrorAlert, Field, Input } from '../../../shared/components/ui.
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
 import { GoogleButton } from '../components/GoogleButton.js';
+import { toast } from '../../../shared/stores/toast.js';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -54,7 +55,20 @@ export function RegisterPage() {
                 <span>o con correo</span>
                 <span className="h-px flex-1 bg-paper-300" />
               </div>
-              <form onSubmit={handleSubmit((d) => mutate(d, { onSuccess: () => navigate('/dashboard') }))} className="space-y-8">
+              <form
+                onSubmit={handleSubmit((d) =>
+                  mutate(d, {
+                    onSuccess: (user) => {
+                      toast.success(
+                        `Cuenta creada — bienvenido, ${user.fullName.split(' ')[0]}`,
+                        'Te enviamos un email para verificar tu cuenta.',
+                      );
+                      navigate('/dashboard');
+                    },
+                  }),
+                )}
+                className="space-y-8"
+              >
                 <Field number="01" label="Nombre completo" error={errors.fullName?.message}>
                   <Input autoComplete="name" placeholder="María Eugenia Pérez" {...register('fullName')} />
                 </Field>

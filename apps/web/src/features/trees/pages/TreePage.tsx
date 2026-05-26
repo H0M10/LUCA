@@ -5,10 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PersonCreateSchema, type PersonCreateInput } from '@genograma/shared';
 import * as api from '../api/trees.js';
-import type { PersonDto, RelationshipDto } from '../api/trees.js';
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
-import { Button, ErrorAlert, Field, Input, Select, Textarea } from '../../../shared/components/ui.js';
+import { Button, ErrorAlert, Field, Input, Select } from '../../../shared/components/ui.js';
+import { GenogramView } from '../components/GenogramView.js';
+import { Branch } from '../../../shared/brand/Logo.js';
+import { toast } from '../../../shared/stores/toast.js';
 
 export function TreePage() {
   const { id } = useParams<{ id: string }>();
@@ -20,25 +22,32 @@ export function TreePage() {
     enabled: !!id,
   });
   const [showAdd, setShowAdd] = useState(false);
+  const [view, setView] = useState<'tree' | 'list'>('tree');
   const [linkMode, setLinkMode] = useState<null | { from: string; type: 'parent' | 'partner' }>(null);
 
   const delTree = useMutation({
     mutationFn: () => api.deleteTree(id!),
     onSuccess: () => {
+      toast.success('Árbol eliminado');
       qc.invalidateQueries({ queryKey: ['trees'] });
       navigate('/dashboard');
     },
   });
   const delPerson = useMutation({
     mutationFn: (pid: string) => api.deletePerson(pid),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tree', id] }),
+    onSuccess: () => {
+      toast.success('Persona eliminada');
+      qc.invalidateQueries({ queryKey: ['tree', id] });
+    },
   });
   const addRel = useMutation({
     mutationFn: api.addRelationship,
     onSuccess: () => {
+      toast.success('Relación creada');
       qc.invalidateQueries({ queryKey: ['tree', id] });
       setLinkMode(null);
     },
+    onError: (e) => toast.error('No se pudo crear', (e as { message?: string }).message),
   });
 
   if (isLoading || !tree) {
@@ -56,12 +65,15 @@ export function TreePage() {
     <div>
       <Navbar />
       <main className="editorial py-12 md:py-16">
-        <Link to="/dashboard" className="link-underline mb-6 inline-block font-mono text-[10px] uppercase tracking-widest text-ink-500">
+        <Link
+          to="/dashboard"
+          className="link-underline mb-6 inline-block animate-slide-in font-mono text-[10px] uppercase tracking-widest text-ink-500"
+        >
           ← Archivos
         </Link>
 
         {/* Header */}
-        <header className="mb-10 grid grid-cols-12 items-end gap-x-6 gap-y-6 border-b border-paper-300 pb-10">
+        <header className="mb-10 grid grid-cols-12 items-end gap-x-6 gap-y-6 border-b border-paper-300 pb-10 stagger">
           <div className="col-span-12 md:col-span-8">
             <p className="section-number">— Árbol {tree.id.slice(0, 6)}</p>
             <h1 className="mt-4 font-display text-display-md font-light leading-[0.95] text-ink-900">
@@ -73,38 +85,64 @@ export function TreePage() {
               </p>
             )}
             <p className="mt-6 font-mono text-[10px] uppercase tracking-widest text-ink-500">
-              {tree.persons.length} {tree.persons.length === 1 ? 'persona' : 'personas'} · {tree.relationships.length} {tree.relationships.length === 1 ? 'relación' : 'relaciones'}
+              {tree.persons.length} {tree.persons.length === 1 ? 'persona' : 'personas'} ·{' '}
+              {tree.relationships.length} {tree.relationships.length === 1 ? 'relación' : 'relaciones'}
             </p>
           </div>
           <div className="col-span-12 flex flex-wrap items-center gap-3 md:col-span-4 md:justify-end">
-            <Button variant="ghost" onClick={() => {
-              if (confirm('¿Eliminar este árbol? Esta acción se puede revertir desde el panel admin en 30 días.')) {
-                delTree.mutate();
-              }
-            }}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (confirm('¿Eliminar este árbol? Esta acción se puede revertir desde el panel admin en 30 días.')) {
+                  delTree.mutate();
+                }
+              }}
+            >
               Eliminar
             </Button>
             <Button onClick={() => setShowAdd(true)}>+ Persona</Button>
           </div>
         </header>
 
-        {linkMode && (
-          <div className="mb-6 flex flex-wrap items-center gap-4 border-y border-moss-700/30 bg-moss-50 px-5 py-4">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-moss-700">Modo enlace</span>
-            <span className="font-sans text-sm text-ink-700">
-              Selecciona la persona objetivo del enlace{' '}
-              <em className="fr-italic text-moss-700">
-                {linkMode.type === 'parent' ? 'padre/madre → hijo/a' : 'pareja'}
-              </em>.
-            </span>
+        {/* Toolbar — vista + estado */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 animate-fade-up">
+          <div className="inline-flex rounded-full border border-paper-300 bg-paper-50 p-1 text-xs">
             <button
-              onClick={() => setLinkMode(null)}
-              className="ml-auto font-mono text-[10px] uppercase tracking-widest text-clay-600 hover:text-clay-700"
+              onClick={() => setView('tree')}
+              className={`rounded-full px-4 py-1.5 font-sans transition ${
+                view === 'tree' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+              }`}
             >
-              Cancelar
+              Genograma
+            </button>
+            <button
+              onClick={() => setView('list')}
+              className={`rounded-full px-4 py-1.5 font-sans transition ${
+                view === 'list' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+              }`}
+            >
+              Lista
             </button>
           </div>
-        )}
+
+          {linkMode && (
+            <div className="animate-slide-in flex flex-wrap items-center gap-3 border border-moss-700/40 bg-moss-50 px-4 py-2">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-moss-700">Modo enlace</span>
+              <span className="font-sans text-xs text-ink-700">
+                Selecciona objetivo —{' '}
+                <em className="fr-italic text-moss-700">
+                  {linkMode.type === 'parent' ? 'padre/madre → hijo/a' : 'pareja'}
+                </em>
+              </span>
+              <button
+                onClick={() => setLinkMode(null)}
+                className="font-mono text-[10px] uppercase tracking-widest text-clay-600 hover:text-clay-700"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+        </div>
 
         {showAdd && (
           <AddPersonForm
@@ -114,34 +152,43 @@ export function TreePage() {
           />
         )}
 
-        {/* Grid */}
+        {/* Empty state */}
         {tree.persons.length === 0 ? (
-          <div className="border border-dashed border-paper-400 py-16 text-center font-display text-xl italic text-ink-500">
-            Este archivo aún está vacío. Empieza por ti.
+          <div className="animate-scale-in border border-dashed border-paper-400 px-6 py-16 text-center">
+            <Branch className="mx-auto h-6 w-32 text-moss-700" />
+            <h3 className="mt-6 font-display text-2xl font-light text-ink-900">
+              Este archivo está vacío
+            </h3>
+            <p className="mt-2 font-display text-base italic text-ink-500">
+              Empieza por ti — todo árbol crece desde una raíz.
+            </p>
+            <div className="mt-6">
+              <Button onClick={() => setShowAdd(true)}>+ Agregar primera persona</Button>
+            </div>
           </div>
+        ) : view === 'tree' ? (
+          <GenogramView
+            persons={tree.persons}
+            relationships={tree.relationships}
+            linkMode={linkMode}
+            onSelectAsTarget={(toId) =>
+              addRel.mutate({
+                type: linkMode!.type,
+                fromPersonId: linkMode!.from,
+                toPersonId: toId,
+              })
+            }
+            onStartLink={(id, type) => setLinkMode({ from: id, type })}
+            onDelete={(id) => {
+              const p = tree.persons.find((x) => x.id === id);
+              if (p && confirm(`¿Eliminar a ${p.firstName}?`)) delPerson.mutate(id);
+            }}
+          />
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {tree.persons.map((p) => (
-              <PersonCard
-                key={p.id}
-                person={p}
-                relationships={tree.relationships}
-                persons={tree.persons}
-                linkMode={linkMode}
-                onStartLink={(type) => setLinkMode({ from: p.id, type })}
-                onCompleteLink={(toId) =>
-                  addRel.mutate({
-                    type: linkMode!.type,
-                    fromPersonId: linkMode!.from,
-                    toPersonId: toId,
-                  })
-                }
-                onDelete={() => {
-                  if (confirm(`¿Eliminar a ${p.firstName}?`)) delPerson.mutate(p.id);
-                }}
-              />
-            ))}
-          </div>
+          <ListView
+            persons={tree.persons}
+            relationships={tree.relationships}
+          />
         )}
 
         <ErrorAlert message={addRel.error ? (addRel.error as { message: string }).message : undefined} />
@@ -151,146 +198,86 @@ export function TreePage() {
   );
 }
 
-function PersonCard({
-  person,
-  relationships,
+function ListView({
   persons,
-  linkMode,
-  onStartLink,
-  onCompleteLink,
-  onDelete,
+  relationships,
 }: {
-  person: PersonDto;
-  relationships: RelationshipDto[];
-  persons: PersonDto[];
-  linkMode: null | { from: string; type: 'parent' | 'partner' };
-  onStartLink: (type: 'parent' | 'partner') => void;
-  onCompleteLink: (toId: string) => void;
-  onDelete: () => void;
+  persons: api.PersonDto[];
+  relationships: api.RelationshipDto[];
 }) {
-  const parents = relationships
-    .filter((r) => r.type === 'parent' && r.toPersonId === person.id)
-    .map((r) => persons.find((p) => p.id === r.fromPersonId))
-    .filter(Boolean) as PersonDto[];
-  const children = relationships
-    .filter((r) => r.type === 'parent' && r.fromPersonId === person.id)
-    .map((r) => persons.find((p) => p.id === r.toPersonId))
-    .filter(Boolean) as PersonDto[];
-  const partners = relationships
-    .filter((r) => r.type === 'partner' && (r.fromPersonId === person.id || r.toPersonId === person.id))
-    .map((r) => persons.find((p) => p.id === (r.fromPersonId === person.id ? r.toPersonId : r.fromPersonId)))
-    .filter(Boolean) as PersonDto[];
-
-  const isTarget = linkMode && linkMode.from !== person.id;
-  const isSource = linkMode && linkMode.from === person.id;
-
   return (
-    <article
-      className={`group relative border bg-paper-50 transition ${
-        isTarget
-          ? 'cursor-pointer border-moss-700 shadow-moss'
-          : isSource
-            ? 'border-clay-500'
-            : 'border-paper-300 hover:border-ink-900 hover:shadow-paper-lg'
-      }`}
-    >
-      {isTarget && (
-        <button
-          onClick={() => onCompleteLink(person.id)}
-          className="absolute inset-0 z-10"
-          aria-label="Seleccionar como objetivo"
-        />
-      )}
+    <ul className="divide-y divide-paper-300 border-y border-paper-300">
+      {persons.map((p, i) => {
+        const parents = relationships
+          .filter((r) => r.type === 'parent' && r.toPersonId === p.id)
+          .map((r) => persons.find((x) => x.id === r.fromPersonId)?.firstName)
+          .filter(Boolean);
+        const children = relationships
+          .filter((r) => r.type === 'parent' && r.fromPersonId === p.id)
+          .map((r) => persons.find((x) => x.id === r.toPersonId)?.firstName)
+          .filter(Boolean);
+        const partners = relationships
+          .filter((r) => r.type === 'partner' && (r.fromPersonId === p.id || r.toPersonId === p.id))
+          .map((r) =>
+            persons.find((x) => x.id === (r.fromPersonId === p.id ? r.toPersonId : r.fromPersonId))
+              ?.firstName,
+          )
+          .filter(Boolean);
 
-      {/* Header strip */}
-      <div className="flex items-center justify-between border-b border-paper-300 bg-paper-100 px-4 py-2">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
-          {person.gender === 'female' ? 'F' : person.gender === 'male' ? 'M' : '—'}
-          {person.deathDate && ' · †'}
-        </span>
-        {person.isProband && (
-          <span className="rounded-full bg-ink-900 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-widest text-paper-50">
-            Yo
-          </span>
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="p-5">
-        <Link
-          to={`/persons/${person.id}?treeId=${person.treeId}`}
-          className="block"
-        >
-          <PersonSymbol gender={person.gender} dead={!!person.deathDate} />
-          <h3 className="mt-4 font-display text-2xl font-light leading-tight text-ink-900 transition group-hover:text-moss-700">
-            {person.firstName} {person.lastName ?? ''}
-          </h3>
-          {person.alias && (
-            <p className="mt-0.5 font-display text-sm italic text-ink-500">«{person.alias}»</p>
-          )}
-          <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink-500">
-            {person.birthDate ?? '?'} — {person.deathDate ?? (person.birthDate ? 'presente' : '')}
-          </p>
-        </Link>
-
-        {(parents.length > 0 || children.length > 0 || partners.length > 0) && (
-          <dl className="mt-4 space-y-1 border-t border-paper-300 pt-3 font-sans text-xs text-ink-500">
-            {parents.length > 0 && (
-              <div className="flex gap-2">
-                <dt className="font-mono uppercase tracking-widest text-ink-300">Padres</dt>
-                <dd className="flex-1 text-ink-700">{parents.map((p) => p.firstName).join(' · ')}</dd>
+        return (
+          <li
+            key={p.id}
+            className="animate-fade-up"
+            style={{ animationDelay: `${0.05 + i * 0.04}s` }}
+          >
+            <Link
+              to={`/persons/${p.id}?treeId=${p.treeId}`}
+              className="group grid grid-cols-12 items-baseline gap-x-6 py-6 transition hover:bg-paper-50"
+            >
+              <span className="col-span-2 font-mono text-xs uppercase tracking-widest text-ink-300 md:col-span-1">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <div className="col-span-10 md:col-span-4">
+                <h3 className="font-display text-xl font-light text-ink-900 group-hover:text-moss-700">
+                  {p.firstName} {p.lastName ?? ''}
+                  {p.isProband && (
+                    <span className="ml-2 rounded-full bg-ink-900 px-2 py-0.5 align-middle font-mono text-[9px] uppercase tracking-widest text-paper-50">
+                      Yo
+                    </span>
+                  )}
+                </h3>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
+                  {p.birthDate ?? '?'} — {p.deathDate ?? (p.birthDate ? 'presente' : '')}
+                </p>
               </div>
-            )}
-            {partners.length > 0 && (
-              <div className="flex gap-2">
-                <dt className="font-mono uppercase tracking-widest text-ink-300">Pareja</dt>
-                <dd className="flex-1 text-ink-700">{partners.map((p) => p.firstName).join(' · ')}</dd>
+              <div className="col-span-12 mt-3 space-y-0.5 font-sans text-xs text-ink-500 md:col-span-6 md:mt-0">
+                {parents.length > 0 && (
+                  <p>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-ink-300">Padres · </span>
+                    {parents.join(' / ')}
+                  </p>
+                )}
+                {partners.length > 0 && (
+                  <p>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-ink-300">Pareja · </span>
+                    {partners.join(' / ')}
+                  </p>
+                )}
+                {children.length > 0 && (
+                  <p>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-ink-300">Hijos · </span>
+                    {children.join(' / ')}
+                  </p>
+                )}
               </div>
-            )}
-            {children.length > 0 && (
-              <div className="flex gap-2">
-                <dt className="font-mono uppercase tracking-widest text-ink-300">Hijos</dt>
-                <dd className="flex-1 text-ink-700">{children.map((p) => p.firstName).join(' · ')}</dd>
-              </div>
-            )}
-          </dl>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="relative z-20 flex border-t border-paper-300 text-xs">
-        <button onClick={() => onStartLink('parent')} className="flex-1 px-3 py-2.5 font-sans text-ink-500 transition hover:bg-paper-200 hover:text-ink-900">
-          + hijo
-        </button>
-        <span className="w-px bg-paper-300" />
-        <button onClick={() => onStartLink('partner')} className="flex-1 px-3 py-2.5 font-sans text-ink-500 transition hover:bg-paper-200 hover:text-ink-900">
-          + pareja
-        </button>
-        <span className="w-px bg-paper-300" />
-        <button onClick={onDelete} className="flex-1 px-3 py-2.5 font-sans text-clay-600 transition hover:bg-clay-100 hover:text-clay-700">
-          Eliminar
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function PersonSymbol({ gender, dead }: { gender: string | null; dead: boolean }) {
-  // Genogram standard: square=male, circle=female, diamond=other
-  const color = dead ? '#A89F8E' : '#1F1A14';
-  const symbol =
-    gender === 'female' ? (
-      <circle cx="24" cy="24" r="20" fill="none" stroke={color} strokeWidth="1.5" />
-    ) : gender === 'male' ? (
-      <rect x="4" y="4" width="40" height="40" fill="none" stroke={color} strokeWidth="1.5" />
-    ) : (
-      <path d="M 24 4 L 44 24 L 24 44 L 4 24 Z" fill="none" stroke={color} strokeWidth="1.5" />
-    );
-  return (
-    <svg viewBox="0 0 48 48" className="h-12 w-12">
-      {symbol}
-      {dead && <line x1="6" y1="6" x2="42" y2="42" stroke={color} strokeWidth="1.5" />}
-    </svg>
+              <span className="col-span-1 hidden font-mono text-base text-ink-300 transition group-hover:translate-x-1 group-hover:text-moss-700 md:block md:text-right">
+                →
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -308,14 +295,16 @@ function AddPersonForm({
   });
   const { mutate, isPending, error } = useMutation({
     mutationFn: (input: PersonCreateInput) => api.addPerson(treeId, input),
-    onSuccess: () => {
+    onSuccess: (p) => {
+      toast.success(`${p.firstName} agregado`);
       onAdded();
       onClose();
     },
+    onError: () => toast.error('No se pudo agregar la persona'),
   });
 
   return (
-    <section className="mb-10 border-y border-paper-300 bg-paper-50 py-10">
+    <section className="mb-10 animate-scale-in border-y border-paper-300 bg-paper-50 py-10">
       <div className="grid grid-cols-12 gap-x-6 gap-y-6">
         <div className="col-span-12 md:col-span-3">
           <p className="section-number">— Nueva persona</p>

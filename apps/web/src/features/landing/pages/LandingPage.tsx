@@ -3,8 +3,10 @@ import { useEffect, useRef } from 'react';
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
 import { Branch, Logo } from '../../../shared/brand/Logo.js';
+import { useMe } from '../../auth/hooks/useAuth.js';
 
 export function LandingPage() {
+  const { data: me } = useMe();
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -70,13 +72,23 @@ export function LandingPage() {
             </p>
 
             <div className="mt-10 flex flex-wrap items-center gap-4">
-              <Link
-                to="/register"
-                className="group inline-flex items-center gap-3 rounded-full bg-ink-900 px-7 py-3.5 font-sans text-base font-medium text-paper-50 transition hover:bg-moss-700"
-              >
-                Empezar mi árbol
-                <span className="transition-transform group-hover:translate-x-1">→</span>
-              </Link>
+              {me ? (
+                <Link
+                  to="/dashboard"
+                  className="group inline-flex items-center gap-3 rounded-full bg-moss-700 px-7 py-3.5 font-sans text-base font-medium text-paper-50 transition hover:bg-moss-800"
+                >
+                  Ir a mis árboles
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
+                </Link>
+              ) : (
+                <Link
+                  to="/register"
+                  className="group inline-flex items-center gap-3 rounded-full bg-ink-900 px-7 py-3.5 font-sans text-base font-medium text-paper-50 transition hover:bg-moss-700"
+                >
+                  Empezar mi árbol
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
+                </Link>
+              )}
               <a href="#metodo" className="link-underline font-sans text-base text-ink-700">
                 Conocer el método
               </a>
@@ -294,27 +306,59 @@ export function LandingPage() {
 
         <div className="editorial relative grid grid-cols-12 gap-6">
           <div className="col-span-12 md:col-span-7">
-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-sand-500">— 05 / Empieza hoy</p>
-            <h2 className="mt-3 font-display text-display-lg font-light leading-[0.95] text-paper-100">
-              Tu árbol está
-              <br />
-              <em className="fr-italic text-sand-500">esperando</em> ser plantado.
-            </h2>
-            <p className="mt-6 max-w-md font-sans text-lg leading-relaxed text-paper-300">
-              Registra a tu familia, conserva su historia clínica y descubre los patrones que te definen. Gratis para empezar.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center gap-6">
-              <Link
-                to="/register"
-                className="group inline-flex items-center gap-3 rounded-full bg-paper-50 px-8 py-4 font-sans text-base font-medium text-ink-900 transition hover:bg-sand-500"
-              >
-                Crear mi cuenta gratis
-                <span className="transition-transform group-hover:translate-x-1">→</span>
-              </Link>
-              <Link to="/login" className="link-underline font-sans text-base text-paper-100">
-                Ya tengo cuenta
-              </Link>
-            </div>
+            {me ? (
+              <>
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-sand-500">
+                  — 05 / Tu archivo te espera
+                </p>
+                <h2 className="mt-3 font-display text-display-lg font-light leading-[0.95] text-paper-100">
+                  Bienvenido,{' '}
+                  <em className="fr-italic text-sand-500">
+                    {me.fullName.split(' ')[0]}
+                  </em>.
+                </h2>
+                <p className="mt-6 max-w-md font-sans text-lg leading-relaxed text-paper-300">
+                  Tu sesión está abierta. Continúa donde lo dejaste — añade generaciones, registra
+                  condiciones, comparte ramas.
+                </p>
+                <div className="mt-10 flex flex-wrap items-center gap-6">
+                  <Link
+                    to="/dashboard"
+                    className="group inline-flex items-center gap-3 rounded-full bg-paper-50 px-8 py-4 font-sans text-base font-medium text-ink-900 transition hover:bg-sand-500"
+                  >
+                    Ir a mis árboles
+                    <span className="transition-transform group-hover:translate-x-1">→</span>
+                  </Link>
+                  <Link to="/profile" className="link-underline font-sans text-base text-paper-100">
+                    Mi perfil
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-sand-500">— 05 / Empieza hoy</p>
+                <h2 className="mt-3 font-display text-display-lg font-light leading-[0.95] text-paper-100">
+                  Tu árbol está
+                  <br />
+                  <em className="fr-italic text-sand-500">esperando</em> ser plantado.
+                </h2>
+                <p className="mt-6 max-w-md font-sans text-lg leading-relaxed text-paper-300">
+                  Registra a tu familia, conserva su historia clínica y descubre los patrones que te definen. Gratis para empezar.
+                </p>
+                <div className="mt-10 flex flex-wrap items-center gap-6">
+                  <Link
+                    to="/register"
+                    className="group inline-flex items-center gap-3 rounded-full bg-paper-50 px-8 py-4 font-sans text-base font-medium text-ink-900 transition hover:bg-sand-500"
+                  >
+                    Crear mi cuenta gratis
+                    <span className="transition-transform group-hover:translate-x-1">→</span>
+                  </Link>
+                  <Link to="/login" className="link-underline font-sans text-base text-paper-100">
+                    Ya tengo cuenta
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="col-span-12 hidden md:col-span-4 md:col-start-9 md:block">
