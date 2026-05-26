@@ -1,13 +1,15 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// VITE_BASE controla el path base para GitHub Pages.
-// Si tu repo es https://USUARIO.github.io/LUCA/, pon VITE_BASE=/LUCA/ en apps/web/.env
+// El sitio se publica en https://h0m10.github.io/LUCA/, así que en producción
+// el base path es /LUCA/. En dev local queda en '/'.
+// Se puede sobreescribir con VITE_BASE en .env si en algún momento cambias el path.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const base = env.VITE_BASE || (mode === 'production' ? '/LUCA/' : '/');
   return {
     plugins: [react()],
-    base: env.VITE_BASE || '/',
+    base,
     server: { port: 5173 },
     preview: { port: 4173 },
     build: {

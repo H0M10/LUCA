@@ -29,8 +29,10 @@ out/
 .env.local
 .env.*.local
 .env.development
-.env.production
 .env.staging
+# NOTA: apps/web/.env.production se COMMITEA (no contiene secretos,
+# solo VITE_BASE y VITE_API_BASE_URL públicos del frontend)
+!apps/web/.env.production
 
 # =====================================================================
 # Logs
