@@ -25,6 +25,10 @@ const EnvSchema = z.object({
   MAIL_FROM_EMAIL: z.string().optional(),
   FRONTEND_URL: z.string().default('https://h0m10.github.io/LUCA'),
   STORAGE_DIR: z.string().default('./storage'),
+  DEBUG_ERRORS: z
+    .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
+    .default(false)
+    .transform((v) => v === true || v === 'true' || v === '1'),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
