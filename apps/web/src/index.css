@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --grain-opacity: 0.035;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-paper-100 text-ink-900;
+    font-feature-settings: 'kern', 'liga', 'ss01';
+    background-image:
+      radial-gradient(at 15% 10%, rgba(217, 182, 121, 0.08) 0px, transparent 50%),
+      radial-gradient(at 90% 80%, rgba(61, 82, 64, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  /* Subtle paper grain over everything */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' /%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background-color: #3D5240;
+    color: #FBF8F1;
+  }
+
+  /* Display headings use Fraunces with proper variable axes */
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-variation-settings: 'opsz' 144, 'SOFT' 30;
+  }
+}
+
+@layer components {
+  /* Editorial section number (01., 02., ...) */
+  .section-number {
+    @apply font-mono text-xs uppercase tracking-widest text-ink-500;
+  }
+
+  /* Eyebrow label, used above titles */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 font-sans text-xs uppercase tracking-[0.25em] text-ink-500;
+  }
+  .eyebrow::before {
+    content: '';
+    @apply block h-px w-8 bg-ink-300;
+  }
+
+  /* Underline reveal on hover, archival style */
+  .link-underline {
+    position: relative;
+    transition: color 0.3s ease;
+  }
+  .link-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 1px;
+    background-color: currentColor;
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform 0.4s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  .link-underline:hover::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+
+  /* Editorial divider with ornament */
+  .ornament {
+    @apply mx-auto flex items-center justify-center gap-3 text-ink-300;
+  }
+  .ornament::before,
+  .ornament::after {
+    content: '';
+    @apply block h-px w-12 bg-current;
+  }
+
+  /* Container for editorial pages */
+  .editorial {
+    @apply mx-auto w-full px-5 sm:px-8 md:px-12;
+    max-width: 80rem;
+  }
+
+  /* Marker / highlight effect under text */
+  .marker-moss {
+    background-image: linear-gradient(120deg, transparent 0%, transparent 35%, rgba(61, 82, 64, 0.18) 35%, rgba(61, 82, 64, 0.18) 100%);
+  }
+
+  /* Paper card */
+  .card-paper {
+    @apply rounded-sm border border-paper-300 bg-paper-50 shadow-paper;
+  }
+
+  /* Stagger children animation */
+  .stagger > * {
+    animation: fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0.05s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.15s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.25s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.35s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.45s; }
+  .stagger > *:nth-child(6) { animation-delay: 0.55s; }
+  .stagger > *:nth-child(7) { animation-delay: 0.65s; }
+  .stagger > *:nth-child(8) { animation-delay: 0.75s; }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  /* Fraunces variable axes utilities */
+  .fr-soft { font-variation-settings: 'opsz' 144, 'SOFT' 100; }
+  .fr-italic { font-style: italic; font-variation-settings: 'opsz' 144, 'SOFT' 50; }
+
+  /* Vertical text for editorial sidenotes */
+  .vertical-rl {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+}

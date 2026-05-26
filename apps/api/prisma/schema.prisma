@@ -1,0 +1,428 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model allergy {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  person_id  String   @db.Uuid
+  kind       String
+  name       String
+  severity   String?
+  notes      String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  person     person   @relation(fields: [person_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([person_id], map: "idx_allergy_person")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model app_user {
+  id                                                       String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                                    String             @unique @db.Citext
+  password_hash                                            String?
+  full_name                                                String
+  avatar_media_id                                          String?            @db.Uuid
+  birth_date                                               DateTime?          @db.Date
+  gender                                                   String?
+  role                                                     String             @default("user")
+  status                                                   String             @default("active")
+  email_verified_at                                        DateTime?          @db.Timestamptz(6)
+  last_login_at                                            DateTime?          @db.Timestamptz(6)
+  locale                                                   String?            @default("es")
+  created_at                                               DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at                                               DateTime           @default(now()) @db.Timestamptz(6)
+  deleted_at                                               DateTime?          @db.Timestamptz(6)
+  media_app_user_avatar_media_idTomedia                    media?             @relation("app_user_avatar_media_idTomedia", fields: [avatar_media_id], references: [id], onUpdate: NoAction, map: "fk_app_user_avatar")
+  audit_log                                                audit_log[]
+  auth_token                                               auth_token[]
+  broadcast                                                broadcast[]
+  content_report_content_report_reporter_user_idToapp_user content_report[]   @relation("content_report_reporter_user_idToapp_user")
+  content_report_content_report_resolved_byToapp_user      content_report[]   @relation("content_report_resolved_byToapp_user")
+  feature_flag                                             feature_flag[]
+  ip_block                                                 ip_block[]
+  login_attempt                                            login_attempt[]
+  media_media_owner_user_idToapp_user                      media[]            @relation("media_owner_user_idToapp_user")
+  notification                                             notification[]
+  oauth_account                                            oauth_account[]
+  refresh_token                                            refresh_token[]
+  share_link                                               share_link[]
+  totp_backup_code                                         totp_backup_code[]
+  totp_secret                                              totp_secret?
+  tree                                                     tree[]
+  tree_member_tree_member_invited_byToapp_user             tree_member[]      @relation("tree_member_invited_byToapp_user")
+  tree_member_tree_member_user_idToapp_user                tree_member[]      @relation("tree_member_user_idToapp_user")
+}
+
+model audit_log {
+  id          BigInt    @id @default(autoincrement())
+  user_id     String?   @db.Uuid
+  tree_id     String?   @db.Uuid
+  entity_type String
+  entity_id   String?   @db.Uuid
+  action      String
+  diff        Json?
+  ip          String?   @db.Inet
+  user_agent  String?
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  tree        tree?     @relation(fields: [tree_id], references: [id], onUpdate: NoAction)
+  app_user    app_user? @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@index([entity_type, entity_id], map: "idx_audit_log_entity")
+  @@index([tree_id, created_at(sort: Desc)], map: "idx_audit_log_tree_time")
+  @@index([user_id, created_at(sort: Desc)], map: "idx_audit_log_user_time")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model auth_token {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  purpose    String
+  token_hash String    @unique
+  payload    Json?
+  expires_at DateTime  @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  app_user   app_user? @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_auth_token_expires")
+  @@index([user_id, purpose], map: "idx_auth_token_user_purpose")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model broadcast {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title        String
+  body         String
+  channel      String
+  scheduled_at DateTime? @db.Timestamptz(6)
+  sent_at      DateTime? @db.Timestamptz(6)
+  created_by   String    @db.Uuid
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  app_user     app_user  @relation(fields: [created_by], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model clinical_document {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  person_id  String    @db.Uuid
+  media_id   String    @db.Uuid
+  title      String
+  category   String?
+  issued_at  DateTime? @db.Date
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  media      media     @relation(fields: [media_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  person     person    @relation(fields: [person_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([person_id], map: "idx_clinical_document_person")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model content_report {
+  id                                                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reporter_user_id                                   String?   @db.Uuid
+  entity_type                                        String
+  entity_id                                          String    @db.Uuid
+  reason                                             String
+  status                                             String    @default("pending")
+  resolved_by                                        String?   @db.Uuid
+  resolved_at                                        DateTime? @db.Timestamptz(6)
+  created_at                                         DateTime  @default(now()) @db.Timestamptz(6)
+  app_user_content_report_reporter_user_idToapp_user app_user? @relation("content_report_reporter_user_idToapp_user", fields: [reporter_user_id], references: [id], onUpdate: NoAction)
+  app_user_content_report_resolved_byToapp_user      app_user? @relation("content_report_resolved_byToapp_user", fields: [resolved_by], references: [id], onUpdate: NoAction)
+
+  @@index([status, created_at(sort: Desc)], map: "idx_content_report_status")
+}
+
+model feature_flag {
+  key         String    @id
+  value       Json
+  description String?
+  updated_by  String?   @db.Uuid
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+  app_user    app_user? @relation(fields: [updated_by], references: [id], onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model habit {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  person_id  String   @db.Uuid
+  kind       String
+  intensity  String?
+  start_age  Int?
+  end_age    Int?
+  notes      String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  person     person   @relation(fields: [person_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([person_id], map: "idx_habit_person")
+}
+
+model ip_block {
+  ip            String    @id @db.Inet
+  reason        String?
+  blocked_until DateTime? @db.Timestamptz(6)
+  created_by    String?   @db.Uuid
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  app_user      app_user? @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+}
+
+model login_attempt {
+  id             BigInt    @id @default(autoincrement())
+  email          String?   @db.Citext
+  user_id        String?   @db.Uuid
+  ip             String?   @db.Inet
+  user_agent     String?
+  success        Boolean
+  failure_reason String?
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  app_user       app_user? @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@index([email, created_at(sort: Desc)], map: "idx_login_attempt_email_time")
+  @@index([ip, created_at(sort: Desc)], map: "idx_login_attempt_ip_time")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model media {
+  id                                       String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  owner_user_id                            String              @db.Uuid
+  kind                                     String
+  mime_type                                String
+  bytes                                    BigInt
+  storage_path                             String
+  sizes                                    Json?
+  original_name                            String?
+  sha256                                   String?
+  created_at                               DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at                               DateTime?           @db.Timestamptz(6)
+  app_user_app_user_avatar_media_idTomedia app_user[]          @relation("app_user_avatar_media_idTomedia")
+  clinical_document                        clinical_document[]
+  app_user_media_owner_user_idToapp_user   app_user            @relation("media_owner_user_idToapp_user", fields: [owner_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  person                                   person[]
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model medical_condition {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String?            @unique
+  name             String
+  category         String?
+  is_hereditary    Boolean?           @default(false)
+  description      String?
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  person_condition person_condition[]
+}
+
+model notification {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  type       String
+  title      String
+  body       String?
+  data       Json?
+  read_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  app_user   app_user  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model oauth_account {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String   @db.Uuid
+  provider         String
+  provider_user_id String
+  email            String?  @db.Citext
+  email_verified   Boolean  @default(false)
+  raw_profile      Json?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  app_user         app_user @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([provider, provider_user_id])
+  @@index([user_id], map: "idx_oauth_account_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model person {
+  id                                               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tree_id                                          String              @db.Uuid
+  first_name                                       String
+  last_name                                        String?
+  alias                                            String?
+  gender                                           String?
+  birth_date                                       DateTime?           @db.Date
+  death_date                                       DateTime?           @db.Date
+  is_alive                                         Boolean?            @default(dbgenerated("(death_date IS NULL)"))
+  birth_place                                      String?
+  blood_type                                       String?
+  is_proband                                       Boolean             @default(false)
+  photo_media_id                                   String?             @db.Uuid
+  notes                                            String?
+  sensitive_notes_encrypted                        Bytes?
+  tags                                             String[]            @default([])
+  created_at                                       DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                                       DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at                                       DateTime?           @db.Timestamptz(6)
+  allergy                                          allergy[]
+  clinical_document                                clinical_document[]
+  habit                                            habit[]
+  media                                            media?              @relation(fields: [photo_media_id], references: [id], onUpdate: NoAction)
+  tree                                             tree                @relation(fields: [tree_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  person_condition                                 person_condition[]
+  pregnancy_pregnancy_child_person_idToperson      pregnancy[]         @relation("pregnancy_child_person_idToperson")
+  pregnancy_pregnancy_person_idToperson            pregnancy[]         @relation("pregnancy_person_idToperson")
+  relationship_relationship_from_person_idToperson relationship[]      @relation("relationship_from_person_idToperson")
+  relationship_relationship_to_person_idToperson   relationship[]      @relation("relationship_to_person_idToperson")
+
+  @@index([tree_id, last_name, first_name], map: "idx_person_name")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model person_condition {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  person_id         String             @db.Uuid
+  condition_id      String?            @db.Uuid
+  custom_name       String?
+  age_at_diagnosis  Int?
+  status            String?
+  severity          String?
+  notes             String?
+  created_at        DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime           @default(now()) @db.Timestamptz(6)
+  medical_condition medical_condition? @relation(fields: [condition_id], references: [id], onUpdate: NoAction)
+  person            person             @relation(fields: [person_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([condition_id], map: "idx_person_condition_condition")
+  @@index([person_id], map: "idx_person_condition_person")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pregnancy {
+  id                                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  person_id                                String    @db.Uuid
+  outcome                                  String
+  child_person_id                          String?   @db.Uuid
+  week                                     Int?
+  date                                     DateTime? @db.Date
+  notes                                    String?
+  created_at                               DateTime  @default(now()) @db.Timestamptz(6)
+  person_pregnancy_child_person_idToperson person?   @relation("pregnancy_child_person_idToperson", fields: [child_person_id], references: [id], onUpdate: NoAction)
+  person_pregnancy_person_idToperson       person    @relation("pregnancy_person_idToperson", fields: [person_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([person_id], map: "idx_pregnancy_person")
+}
+
+model refresh_token {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String          @db.Uuid
+  family_id           String          @db.Uuid
+  token_hash          String          @unique
+  parent_id           String?         @db.Uuid
+  user_agent          String?
+  ip                  String?         @db.Inet
+  expires_at          DateTime        @db.Timestamptz(6)
+  revoked_at          DateTime?       @db.Timestamptz(6)
+  used_at             DateTime?       @db.Timestamptz(6)
+  created_at          DateTime        @default(now()) @db.Timestamptz(6)
+  refresh_token       refresh_token?  @relation("refresh_tokenTorefresh_token", fields: [parent_id], references: [id], onUpdate: NoAction)
+  other_refresh_token refresh_token[] @relation("refresh_tokenTorefresh_token")
+  app_user            app_user        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([family_id], map: "idx_refresh_token_family")
+  @@index([user_id], map: "idx_refresh_token_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model relationship {
+  id                                         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tree_id                                    String    @db.Uuid
+  type                                       String
+  from_person_id                             String    @db.Uuid
+  to_person_id                               String    @db.Uuid
+  subtype                                    String?
+  is_twin                                    Boolean?  @default(false)
+  start_date                                 DateTime? @db.Date
+  end_date                                   DateTime? @db.Date
+  notes                                      String?
+  created_at                                 DateTime  @default(now()) @db.Timestamptz(6)
+  person_relationship_from_person_idToperson person    @relation("relationship_from_person_idToperson", fields: [from_person_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  person_relationship_to_person_idToperson   person    @relation("relationship_to_person_idToperson", fields: [to_person_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tree                                       tree      @relation(fields: [tree_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tree_id, type, from_person_id, to_person_id])
+  @@index([from_person_id], map: "idx_relationship_from")
+  @@index([to_person_id], map: "idx_relationship_to")
+  @@index([tree_id, type], map: "idx_relationship_tree")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model share_link {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tree_id       String    @db.Uuid
+  token_hash    String    @unique
+  permission    String    @default("read")
+  password_hash String?
+  expires_at    DateTime? @db.Timestamptz(6)
+  created_by    String    @db.Uuid
+  revoked_at    DateTime? @db.Timestamptz(6)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  app_user      app_user  @relation(fields: [created_by], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tree          tree      @relation(fields: [tree_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tree_id], map: "idx_share_link_tree")
+}
+
+model totp_backup_code {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  code_hash  String
+  used_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  app_user   app_user  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model totp_secret {
+  user_id          String    @id @db.Uuid
+  secret_encrypted String
+  confirmed_at     DateTime? @db.Timestamptz(6)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  app_user         app_user  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model tree {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  owner_user_id String         @db.Uuid
+  name          String
+  description   String?
+  created_at    DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime       @default(now()) @db.Timestamptz(6)
+  deleted_at    DateTime?      @db.Timestamptz(6)
+  audit_log     audit_log[]
+  person        person[]
+  relationship  relationship[]
+  share_link    share_link[]
+  app_user      app_user       @relation(fields: [owner_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tree_member   tree_member[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tree_member {
+  id                                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tree_id                                   String    @db.Uuid
+  user_id                                   String    @db.Uuid
+  permission                                String
+  invited_by                                String?   @db.Uuid
+  accepted_at                               DateTime? @db.Timestamptz(6)
+  created_at                                DateTime  @default(now()) @db.Timestamptz(6)
+  app_user_tree_member_invited_byToapp_user app_user? @relation("tree_member_invited_byToapp_user", fields: [invited_by], references: [id], onUpdate: NoAction)
+  tree                                      tree      @relation(fields: [tree_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  app_user_tree_member_user_idToapp_user    app_user  @relation("tree_member_user_idToapp_user", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tree_id, user_id])
+  @@index([user_id], map: "idx_tree_member_user")
+}
