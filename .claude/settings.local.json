@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PGPASSWORD=\"postgres\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -h 127.0.0.1 -p 5433 -U postgres -d postgres -c \"SELECT version\\(\\);\")",
+      "PowerShell($env:PGPASSWORD=\"postgres\"; $psql = \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\"; & $psql -h 127.0.0.1 -p 5433 -U postgres -d postgres -c \"DROP DATABASE IF EXISTS genograma;\"; & $psql -h 127.0.0.1 -p 5433 -U postgres -d postgres -c \"CREATE DATABASE genograma;\")",
+      "PowerShell($env:PGPASSWORD=\"postgres\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -h 127.0.0.1 -p 5433 -U postgres -d genograma -v ON_ERROR_STOP=1 -f \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\\\\db\\\\schema.sql\")",
+      "PowerShell(pnpm *)",
+      "PowerShell(Copy-Item *)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\\\\apps\\\\api\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" exec prisma generate 2>&1 | Out-String)",
+      "PowerShell(Out-Null *)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\\\\apps\\\\api\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" typecheck 2>&1 | Select-Object -Last 30)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\\\\apps\\\\api\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" typecheck 2>&1 | Select-Object -Last 10)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\\\\apps\\\\web\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" typecheck 2>&1 | Select-Object -Last 20)",
+      "PowerShell(New-Item *)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\\\\apps\\\\web\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" typecheck 2>&1 | Select-Object -Last 30)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" -r build 2>&1 | Select-Object -Last 40)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" -r typecheck 2>&1 | Select-Object -Last 20)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" -r build 2>&1 | Select-Object -Last 25)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" -r typecheck 2>&1 | Select-Object -Last 10; \"---\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" -r build 2>&1 | Select-Object -Last 12)",
+      "PowerShell(cd \"C:\\\\Users\\\\hanni\\\\Desktop\\\\genograma\"; & node \"$env:APPDATA\\\\npm\\\\node_modules\\\\pnpm\\\\bin\\\\pnpm.cjs\" --filter @genograma/web build 2>&1 | Select-Object -Last 25)"
+    ]
+  }
+}
