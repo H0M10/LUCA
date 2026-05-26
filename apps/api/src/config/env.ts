@@ -11,7 +11,7 @@ const EnvSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
-  COOKIE_DOMAIN: z.string().default('localhost'),
+  COOKIE_DOMAIN: z.string().default(''),
   COOKIE_SECURE: z
     .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
     .default(false)

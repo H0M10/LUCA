@@ -98,29 +98,23 @@ export function LandingPage() {
             </div>
 
             <div className="relative">
-              {/* Frame — caja generosa que se adapta al video completo */}
-              <div className="relative overflow-hidden rounded-sm border border-ink-900/15 bg-ink-950 shadow-paper-lg">
-                <video
-                  ref={videoRef}
-                  className="block w-full"
-                  style={{ maxHeight: '70vh', minHeight: '420px', objectFit: 'contain' }}
-                  src={`${import.meta.env.BASE_URL}intro.mp4#t=2`}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                />
-                {/* Vignette overlay sutil */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/30 via-transparent to-transparent" />
-                {/* Corner caption */}
-                <div className="pointer-events-none absolute bottom-4 left-4 right-4 flex items-end justify-between text-paper-50">
-                  <p className="font-display text-sm italic">Fig. I — Origen</p>
-                  <p className="font-mono text-[10px] uppercase tracking-widest opacity-70">Archivo</p>
-                </div>
-              </div>
+              {/* Video sin marco, sin captions, sin interacción del usuario */}
+              <video
+                ref={videoRef}
+                className="block w-full select-none rounded-sm"
+                style={{ maxHeight: '70vh', objectFit: 'cover', pointerEvents: 'none' }}
+                src={`${import.meta.env.BASE_URL}intro.mp4#t=2`}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                disablePictureInPicture
+                controls={false}
+                onContextMenu={(e) => e.preventDefault()}
+              />
 
-              {/* Caption below */}
+              {/* Caption debajo */}
               <p className="mt-4 max-w-xs font-display text-sm italic text-ink-500">
                 «La memoria de una familia no se hereda, se cultiva.»
               </p>
