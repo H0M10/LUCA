@@ -3,6 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoginSchema, type LoginInput } from '@genograma/shared';
 import { useLogin } from '../hooks/useAuth.js';
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button, ErrorAlert, Field, Input } from '../../../shared/components/ui.js';
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
@@ -10,9 +12,28 @@ import { Branch } from '../../../shared/brand/Logo.js';
 import { GoogleButton } from '../components/GoogleButton.js';
 import { toast } from '../../../shared/stores/toast.js';
 
+const OAUTH_ERRORS: Record<string, string> = {
+  google_not_configured: 'Google OAuth aún no está configurado en el servidor.',
+  missing_params: 'Faltan parámetros en la respuesta de Google.',
+  no_state_cookie: 'Tu navegador bloqueó cookies necesarias para el login con Google. Activa las cookies de terceros o intenta en otro navegador.',
+  bad_cookie: 'Cookie de seguridad inválida. Vuelve a intentar.',
+  state_mismatch: 'Validación de estado falló. Vuelve a intentar.',
+  nonce_mismatch: 'Validación de seguridad falló. Vuelve a intentar.',
+  oauth_failed: 'No pudimos completar el inicio de sesión con Google.',
+};
+
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { mutate, isPending, error } = useLogin();
+
+  useEffect(() => {
+    const err = searchParams.get('error');
+    if (err && OAUTH_ERRORS[err]) {
+      const msg = searchParams.get('msg');
+      toast.error(OAUTH_ERRORS[err]!, msg ?? undefined);
+    }
+  }, [searchParams]);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(LoginSchema),
   });

@@ -27,11 +27,19 @@ authRouter.get('/me', authenticate, ctrl.me);
 // ───────── Google OAuth ─────────
 const OAUTH_STATE_COOKIE = 'gn_oauth';
 
+// FRONTEND_URL ej. https://h0m10.github.io/LUCA (sin slash final)
+// Usamos BrowserRouter, no HashRouter, así que NO ponemos /# en las URLs
+const frontPath = (path: string, query?: string): string => {
+  const base = env.FRONTEND_URL.replace(/\/$/, '');
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}${query ? `?${query}` : ''}`;
+};
+
 // 1) Inicia el flujo: redirige a Google
 authRouter.get('/google', (_req, res, next) => {
   try {
     if (!getGoogleClient()) {
-      return res.redirect(`${env.FRONTEND_URL}/#/login?error=google_not_configured`);
+      return res.redirect(frontPath('/login', 'error=google_not_configured'));
     }
     const { state, nonce } = signOAuthState();
     res.cookie(OAUTH_STATE_COOKIE, JSON.stringify({ state, nonce }), {
@@ -49,39 +57,40 @@ authRouter.get('/google', (_req, res, next) => {
 });
 
 // 2) Google nos llama de vuelta con code+state
-authRouter.get('/google/callback', async (req, res, next) => {
+authRouter.get('/google/callback', async (req, res) => {
   try {
+    logger.info({ query: req.query, cookies: Object.keys(req.cookies || {}) }, 'Google callback');
+
     if (!getGoogleClient()) {
-      return res.redirect(`${env.FRONTEND_URL}/#/login?error=google_not_configured`);
+      return res.redirect(frontPath('/login', 'error=google_not_configured'));
     }
     const { code, state } = req.query as { code?: string; state?: string };
     if (!code || !state) {
-      return res.redirect(`${env.FRONTEND_URL}/#/login?error=missing_params`);
+      return res.redirect(frontPath('/login', 'error=missing_params'));
     }
 
-    // Validar state contra cookie
     const raw = req.cookies?.[OAUTH_STATE_COOKIE];
-    if (!raw) return res.redirect(`${env.FRONTEND_URL}/#/login?error=no_state_cookie`);
+    if (!raw) {
+      logger.warn('Google callback: state cookie missing — likely cross-site cookie blocked');
+      return res.redirect(frontPath('/login', 'error=no_state_cookie'));
+    }
     res.clearCookie(OAUTH_STATE_COOKIE, { path: '/' });
 
     let cookiePayload: { state: string; nonce: string };
     try {
       cookiePayload = JSON.parse(raw);
     } catch {
-      return res.redirect(`${env.FRONTEND_URL}/#/login?error=bad_cookie`);
+      return res.redirect(frontPath('/login', 'error=bad_cookie'));
     }
     if (cookiePayload.state !== state) {
-      return res.redirect(`${env.FRONTEND_URL}/#/login?error=state_mismatch`);
+      return res.redirect(frontPath('/login', 'error=state_mismatch'));
     }
     const { nonce } = verifyOAuthState(state);
     if (nonce !== cookiePayload.nonce) {
-      return res.redirect(`${env.FRONTEND_URL}/#/login?error=nonce_mismatch`);
+      return res.redirect(frontPath('/login', 'error=nonce_mismatch'));
     }
 
-    // Intercambiar code por tokens y verificar id_token
     const payload = await exchangeCodeAndVerify(code, nonce);
-
-    // Encontrar/crear usuario y emitir cookies
     const user = await findOrCreateGoogleUser(payload);
     const tokens = await issueGoogleTokens(
       user.id,
@@ -90,18 +99,14 @@ authRouter.get('/google/callback', async (req, res, next) => {
     );
     setAuthCookies(res, tokens.access, tokens.refresh);
 
-    res.redirect(`${env.FRONTEND_URL}/#/dashboard`);
+    logger.info({ userId: user.id }, 'Google login OK, redirecting to dashboard');
+    res.redirect(frontPath('/dashboard'));
   } catch (e) {
-    logger.error({ err: e }, 'Google OAuth callback failed');
-    res.redirect(`${env.FRONTEND_URL}/#/login?error=oauth_failed`);
+    logger.error({ err: { msg: (e as Error).message, stack: (e as Error).stack } }, 'Google OAuth callback failed');
+    res.redirect(frontPath('/login', `error=oauth_failed&msg=${encodeURIComponent((e as Error).message ?? '')}`));
   }
 });
 
-// Endpoint informativo para el frontend
 authRouter.get('/providers', (_req, res) => {
-  res.json({
-    data: {
-      google: !!getGoogleClient(),
-    },
-  });
+  res.json({ data: { google: !!getGoogleClient() } });
 });
