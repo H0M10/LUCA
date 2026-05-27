@@ -5,6 +5,7 @@ import * as api from '../api/trees.js';
 import * as medApi from '../../medical/api/medical.js';
 import type { PersonDto, RelationshipDto } from '../api/trees.js';
 import { QuickAddDialog, type Relation } from './QuickAddDialog.js';
+import { NotesAndTags } from './NotesAndTags.js';
 import { toast } from '../../../shared/stores/toast.js';
 
 interface Props {
@@ -146,7 +147,12 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
               </FamilyRow>
             </div>
           ) : (
-            <HealthTab person={person} treeId={treeId} />
+            <div className="space-y-6">
+              <HealthTab person={person} treeId={treeId} />
+              <div className="border-t border-paper-300 pt-6">
+                <NotesAndTags person={person} treeId={treeId} />
+              </div>
+            </div>
           )}
         </div>
 
