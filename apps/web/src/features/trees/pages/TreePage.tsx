@@ -7,6 +7,7 @@ import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
 import { Button } from '../../../shared/components/ui.js';
 import { GenogramView } from '../components/GenogramView.js';
+import { FocusedTreeView } from '../components/FocusedTreeView.js';
 import { Branch } from '../../../shared/brand/Logo.js';
 import { toast } from '../../../shared/stores/toast.js';
 import { QuickAddDialog, type Relation } from '../components/QuickAddDialog.js';
@@ -23,7 +24,7 @@ export function TreePage() {
     enabled: !!id,
   });
 
-  const [view, setView] = useState<'tree' | 'list'>('tree');
+  const [view, setView] = useState<'focused' | 'tree' | 'list'>('focused');
   const [openPerson, setOpenPerson] = useState<PersonDto | null>(null);
   const [quickAdd, setQuickAdd] = useState<Relation | null>(null);
   const [showShare, setShowShare] = useState(false);
@@ -108,23 +109,17 @@ export function TreePage() {
               </div>
             )}
 
-            {/* Quick-action bar para proband */}
-            {proband && (
-              <div className="mb-6 flex flex-wrap items-center gap-3 border border-paper-300 bg-paper-50 px-4 py-3 animate-fade-up">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
-                  Agregar familia de {proband.firstName}:
-                </span>
-                <QuickChip onClick={() => setQuickAdd({ kind: 'father', child: proband })}>+ padre</QuickChip>
-                <QuickChip onClick={() => setQuickAdd({ kind: 'mother', child: proband })}>+ madre</QuickChip>
-                <QuickChip onClick={() => setQuickAdd({ kind: 'partner', of: proband })}>+ pareja</QuickChip>
-                <QuickChip onClick={() => setQuickAdd({ kind: 'child', parent: proband })}>+ hijo/a</QuickChip>
-                <QuickChip onClick={() => setQuickAdd({ kind: 'sibling', of: proband })}>+ hermano/a</QuickChip>
-              </div>
-            )}
-
-            {/* Toggle vista */}
+            {/* Toggle vista — Enfocada (default), Genograma completo, Lista */}
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div className="inline-flex rounded-full border border-paper-300 bg-paper-50 p-1 text-xs">
+                <button
+                  onClick={() => setView('focused')}
+                  className={`rounded-full px-4 py-1.5 font-sans transition ${
+                    view === 'focused' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+                  }`}
+                >
+                  Enfocada
+                </button>
                 <button
                   onClick={() => setView('tree')}
                   className={`rounded-full px-4 py-1.5 font-sans transition ${
@@ -143,11 +138,22 @@ export function TreePage() {
                 </button>
               </div>
               <p className="font-sans text-xs italic text-ink-500">
-                Click sobre una persona para agregar a su familia.
+                {view === 'focused' && 'Click sobre un familiar para navegar a él.'}
+                {view === 'tree' && 'Vista completa del árbol — para ver todo de una vez.'}
+                {view === 'list' && 'Lista ordenada — útil para buscar.'}
               </p>
             </div>
 
-            {view === 'tree' ? (
+            {view === 'focused' && (
+              <FocusedTreeView
+                persons={tree.persons}
+                relationships={tree.relationships}
+                onAdd={setQuickAdd}
+                onSelectPerson={setOpenPerson}
+              />
+            )}
+
+            {view === 'tree' && (
               <GenogramView
                 persons={tree.persons}
                 relationships={tree.relationships}
@@ -162,7 +168,9 @@ export function TreePage() {
                   if (p) setOpenPerson(p);
                 }}
               />
-            ) : (
+            )}
+
+            {view === 'list' && (
               <ListView
                 persons={tree.persons}
                 relationships={tree.relationships}
