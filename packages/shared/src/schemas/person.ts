@@ -27,7 +27,25 @@ export const PersonCreateSchema = z
   });
 export type PersonCreateInput = z.infer<typeof PersonCreateSchema>;
 
-export const PersonUpdateSchema = PersonCreateSchema;
+/**
+ * Update permite enviar SOLO los campos que cambian (PATCH parcial).
+ * Sin el refine de fechas porque al actualizar solo una el cliente no envía la otra.
+ */
+export const PersonUpdateSchema = z
+  .object({
+    firstName: z.string().min(1).max(80).trim().optional(),
+    lastName: z.string().max(80).trim().optional(),
+    alias: z.string().max(80).trim().optional(),
+    gender: z.enum(GENDERS).optional(),
+    birthDate: z.coerce.date().nullable().optional(),
+    deathDate: z.coerce.date().nullable().optional(),
+    birthPlace: z.string().max(120).optional(),
+    bloodType: z.enum(BLOOD_TYPES).optional(),
+    isProband: z.boolean().optional(),
+    notes: z.string().max(5000).optional(),
+    tags: z.array(z.string().max(30)).max(20).optional(),
+  })
+  .partial();
 
 export const RelationshipCreateSchema = z
   .object({

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/trees.js';
@@ -13,6 +13,7 @@ import { toast } from '../../../shared/stores/toast.js';
 import { QuickAddDialog, type Relation } from '../components/QuickAddDialog.js';
 import { PersonPanel } from '../components/PersonPanel.js';
 import { ShareTreeDialog } from '../components/ShareTreeDialog.js';
+import { SearchPalette } from '../components/SearchPalette.js';
 
 export function TreePage() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +29,21 @@ export function TreePage() {
   const [openPerson, setOpenPerson] = useState<PersonDto | null>(null);
   const [quickAdd, setQuickAdd] = useState<Relation | null>(null);
   const [showShare, setShowShare] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+
+  // Atajo de teclado: "/" abre búsqueda
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      const inForm = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      if (e.key === '/' && !inForm && !showSearch && !quickAdd && !showShare && !openPerson) {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showSearch, quickAdd, showShare, openPerson]);
 
   const delTree = useMutation({
     mutationFn: () => api.deleteTree(id!),
@@ -201,6 +217,17 @@ export function TreePage() {
       )}
 
       {showShare && <ShareTreeDialog treeId={tree.id} onClose={() => setShowShare(false)} />}
+
+      {showSearch && (
+        <SearchPalette
+          treeId={tree.id}
+          onSelect={(p) => {
+            setShowSearch(false);
+            setOpenPerson(p);
+          }}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
     </div>
   );
 }

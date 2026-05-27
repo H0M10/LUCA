@@ -32,28 +32,32 @@ export async function createPerson(treeId: string, userId: string, input: Person
   return personDto(person);
 }
 
-export async function updatePerson(personId: string, userId: string, input: PersonCreateInput) {
-  const person = await prisma.person.findFirst({
-    where: { id: personId, deleted_at: null },
-  });
+/**
+ * Update parcial — solo aplica los campos enviados. Un valor `null` significa
+ * "limpiar este campo"; undefined significa "no tocar".
+ */
+export async function updatePerson(
+  personId: string,
+  userId: string,
+  input: Partial<PersonCreateInput>,
+) {
+  const person = await prisma.person.findFirst({ where: { id: personId, deleted_at: null } });
   if (!person) throw Errors.notFound('Persona');
   await assertAccess(person.tree_id, userId, 'edit');
 
-  const updated = await prisma.person.update({
-    where: { id: personId },
-    data: {
-      first_name: input.firstName,
-      last_name: input.lastName ?? null,
-      alias: input.alias ?? null,
-      gender: input.gender ?? null,
-      birth_date: input.birthDate ?? null,
-      death_date: input.deathDate ?? null,
-      birth_place: input.birthPlace ?? null,
-      blood_type: input.bloodType ?? null,
-      notes: input.notes ?? null,
-      tags: input.tags ?? [],
-    },
-  });
+  const data: Record<string, unknown> = {};
+  if (input.firstName !== undefined) data.first_name = input.firstName;
+  if (input.lastName !== undefined) data.last_name = input.lastName || null;
+  if (input.alias !== undefined) data.alias = input.alias || null;
+  if (input.gender !== undefined) data.gender = input.gender || null;
+  if (input.birthDate !== undefined) data.birth_date = input.birthDate ?? null;
+  if (input.deathDate !== undefined) data.death_date = input.deathDate ?? null;
+  if (input.birthPlace !== undefined) data.birth_place = input.birthPlace || null;
+  if (input.bloodType !== undefined) data.blood_type = input.bloodType || null;
+  if (input.notes !== undefined) data.notes = input.notes || null;
+  if (input.tags !== undefined) data.tags = input.tags;
+
+  const updated = await prisma.person.update({ where: { id: personId }, data });
   return personDto(updated);
 }
 

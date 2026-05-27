@@ -7,6 +7,19 @@ export interface HttpError {
   details?: unknown;
 }
 
+type OnUnauthorized = () => void;
+let onUnauthorized: OnUnauthorized | null = null;
+
+/** Registra una función global que se invoca cuando cualquier request devuelve 401. */
+export function setOnUnauthorized(handler: OnUnauthorized | null): void {
+  onUnauthorized = handler;
+}
+
+/** True si esa petición no debe disparar el handler global (ej. /me cuando exploramos sesión). */
+function isSilent401Path(path: string): boolean {
+  return path === '/api/auth/me' || path === '/api/auth/refresh' || path === '/api/auth/logout';
+}
+
 export async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     credentials: 'include',
@@ -21,6 +34,9 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const body = isJson ? await res.json() : null;
 
   if (!res.ok) {
+    if (res.status === 401 && !isSilent401Path(path) && onUnauthorized) {
+      onUnauthorized();
+    }
     const err: HttpError = {
       status: res.status,
       code: body?.error?.code ?? 'UNKNOWN',
