@@ -10,6 +10,7 @@ import { DashboardPage } from '../features/trees/pages/DashboardPage.js';
 import { TreePage } from '../features/trees/pages/TreePage.js';
 import { PersonPage } from '../features/trees/pages/PersonPage.js';
 import { ProfilePage } from '../features/profile/pages/ProfilePage.js';
+import { VerifyEmailPage } from '../features/auth/pages/VerifyEmailPage.js';
 
 export function App() {
   return (
@@ -18,6 +19,7 @@ export function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<RedirectIfAuth><LoginPage /></RedirectIfAuth>} />
         <Route path="/register" element={<RedirectIfAuth><RegisterPage /></RedirectIfAuth>} />
+        <Route path="/verify" element={<VerifyEmailPage />} />
         <Route
           path="/dashboard"
           element={

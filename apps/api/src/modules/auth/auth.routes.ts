@@ -12,9 +12,12 @@ import {
   verifyOAuthState,
 } from '../../lib/googleOAuth.js';
 import { findOrCreateGoogleUser, issueGoogleTokens } from './google.service.js';
+import { changePassword, verifyEmail } from './auth.password.service.js';
 import { setAuthCookies } from '../../lib/cookies.js';
 import { env } from '../../config/env.js';
 import { logger } from '../../config/logger.js';
+import { z } from 'zod';
+import { PasswordSchema } from '@genograma/shared';
 
 export const authRouter: RouterType = Router();
 
@@ -109,4 +112,36 @@ authRouter.get('/google/callback', async (req, res) => {
 
 authRouter.get('/providers', (_req, res) => {
   res.json({ data: { google: !!getGoogleClient() } });
+});
+
+// ───────── Cambio de contraseña ─────────
+const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: PasswordSchema,
+});
+
+authRouter.post(
+  '/change-password',
+  authenticate,
+  validateBody(ChangePasswordSchema),
+  async (req, res, next) => {
+    try {
+      await changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
+      res.json({ data: { ok: true } });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ───────── Verificación de email ─────────
+const VerifyEmailSchema = z.object({ token: z.string().min(10) });
+
+authRouter.post('/verify-email', validateBody(VerifyEmailSchema), async (req, res, next) => {
+  try {
+    await verifyEmail(req.body.token);
+    res.json({ data: { ok: true } });
+  } catch (e) {
+    next(e);
+  }
 });

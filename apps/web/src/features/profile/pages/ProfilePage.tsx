@@ -6,6 +6,7 @@ import { updateProfile, type UpdateProfileInput } from '../api/profile.js';
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
 import { Button, ErrorAlert, Field, Input, Select } from '../../../shared/components/ui.js';
+import { ChangePasswordCard } from '../components/ChangePasswordCard.js';
 
 export function ProfilePage() {
   const { data: me } = useMe();
@@ -112,9 +113,7 @@ export function ProfilePage() {
               </h2>
             </div>
             <div className="col-span-12 md:col-span-7 md:col-start-6">
-              <p className="font-sans text-sm leading-relaxed text-ink-500">
-                Próximamente: cambiar contraseña, activar autenticación de dos factores y eliminar cuenta de forma definitiva.
-              </p>
+              <ChangePasswordCard />
             </div>
           </div>
         </section>

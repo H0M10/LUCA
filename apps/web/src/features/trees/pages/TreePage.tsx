@@ -14,6 +14,7 @@ import { QuickAddDialog, type Relation } from '../components/QuickAddDialog.js';
 import { PersonPanel } from '../components/PersonPanel.js';
 import { ShareTreeDialog } from '../components/ShareTreeDialog.js';
 import { SearchPalette } from '../components/SearchPalette.js';
+import { MedicalSummaryDialog } from '../components/MedicalSummaryDialog.js';
 
 export function TreePage() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +31,7 @@ export function TreePage() {
   const [quickAdd, setQuickAdd] = useState<Relation | null>(null);
   const [showShare, setShowShare] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   // Atajo de teclado: "/" abre búsqueda
   useEffect(() => {
@@ -89,9 +91,29 @@ export function TreePage() {
             </p>
           </div>
           <div className="col-span-12 flex flex-wrap items-center gap-3 md:col-span-4 md:justify-end">
+            <Button variant="ghost" onClick={() => setShowSummary(true)}>
+              Resumen clínico
+            </Button>
             <Button variant="ghost" onClick={() => setShowShare(true)}>
               Compartir
             </Button>
+            <button
+              onClick={() => {
+                if (!tree) return;
+                window.location.href = `${import.meta.env.VITE_API_BASE_URL}/api/trees/${tree.id}/export/gedcom`;
+              }}
+              className="link-underline font-mono text-[10px] uppercase tracking-widest text-ink-500 hover:text-ink-900"
+              title="Descargar como archivo GEDCOM (estándar genealógico)"
+            >
+              ↓ GEDCOM
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="link-underline font-mono text-[10px] uppercase tracking-widest text-ink-500 hover:text-ink-900"
+              title="Imprimir o guardar como PDF"
+            >
+              ⎙ Imprimir
+            </button>
             <Button
               variant="ghost"
               onClick={() => {
@@ -228,6 +250,8 @@ export function TreePage() {
           onClose={() => setShowSearch(false)}
         />
       )}
+
+      {showSummary && <MedicalSummaryDialog treeId={tree.id} onClose={() => setShowSummary(false)} />}
     </div>
   );
 }

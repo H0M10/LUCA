@@ -2,6 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   DARK MODE — invierte la paleta archival.
+   ============================================ */
+.dark {
+  color-scheme: dark;
+}
+.dark body {
+  background-color: #15110C;
+  color: #F5F1E8;
+  background-image:
+    radial-gradient(at 15% 10%, rgba(217, 182, 121, 0.05) 0px, transparent 50%),
+    radial-gradient(at 90% 80%, rgba(143, 165, 137, 0.04) 0px, transparent 50%);
+}
+.dark .bg-paper-50 { background-color: #1F1A14 !important; }
+.dark .bg-paper-100 { background-color: #2A231C !important; }
+.dark .bg-paper-200 { background-color: #2A231C !important; }
+.dark .bg-paper-300 { background-color: #3A332B !important; }
+.dark .text-ink-900 { color: #F5F1E8 !important; }
+.dark .text-ink-700 { color: #E5DDD0 !important; }
+.dark .text-ink-500 { color: #A89F8E !important; }
+.dark .text-ink-300 { color: #5E574E !important; }
+.dark .border-paper-300 { border-color: #3A332B !important; }
+.dark .border-paper-400 { border-color: #4A3F33 !important; }
+.dark .border-ink-900 { border-color: #F5F1E8 !important; }
+.dark .border-ink-300 { border-color: #5E574E !important; }
+.dark .bg-ink-900 { background-color: #F5F1E8 !important; color: #1F1A14 !important; }
+.dark .text-paper-50 { color: #15110C !important; }
+.dark .bg-moss-50 { background-color: rgba(143, 165, 137, 0.1) !important; }
+.dark .bg-clay-50 { background-color: rgba(194, 97, 58, 0.1) !important; }
+.dark .bg-moss-100 { background-color: rgba(143, 165, 137, 0.15) !important; }
+.dark .text-moss-700 { color: #8FA589 !important; }
+.dark .border-moss-700 { border-color: #8FA589 !important; }
+.dark .bg-moss-700 { background-color: #8FA589 !important; }
+.dark .hover\:bg-moss-700:hover { background-color: #5A7355 !important; }
+
+/* ============================================
+   PRINT — para imprimir el genograma limpio
+   ============================================ */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  body::before { display: none; }
+  header, footer, .no-print, nav, .editorial > header,
+  .editorial > div > div:first-child > div:last-child {
+    display: none !important;
+  }
+  .editorial { max-width: 100% !important; padding: 0 !important; }
+  .animate-grow-in, .animate-fade-up, .animate-fade-in, .animate-scale-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 @layer base {
   :root {
     --grain-opacity: 0.035;
