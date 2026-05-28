@@ -24,6 +24,9 @@ export async function createPerson(treeId: string, userId: string, input: Person
       birth_date: input.birthDate ?? null,
       death_date: input.deathDate ?? null,
       birth_place: input.birthPlace ?? null,
+      birth_country: input.birthCountry ?? null,
+      birth_lat: input.birthLat ?? null,
+      birth_lng: input.birthLng ?? null,
       blood_type: input.bloodType ?? null,
       is_proband: input.isProband ?? false,
       notes: input.notes ?? null,
@@ -55,6 +58,9 @@ export async function updatePerson(
   if (input.birthDate !== undefined) data.birth_date = input.birthDate ?? null;
   if (input.deathDate !== undefined) data.death_date = input.deathDate ?? null;
   if (input.birthPlace !== undefined) data.birth_place = input.birthPlace || null;
+  if (input.birthCountry !== undefined) data.birth_country = input.birthCountry || null;
+  if (input.birthLat !== undefined) data.birth_lat = input.birthLat ?? null;
+  if (input.birthLng !== undefined) data.birth_lng = input.birthLng ?? null;
   if (input.bloodType !== undefined) data.blood_type = input.bloodType || null;
   if (input.notes !== undefined) data.notes = input.notes || null;
   if (input.tags !== undefined) data.tags = input.tags;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/trees.js';
@@ -7,6 +7,7 @@ import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
 import { Button } from '../../../shared/components/ui.js';
 import { GenogramView } from '../components/GenogramView.js';
+const GlobeView = lazy(() => import('../components/GlobeView.js').then((m) => ({ default: m.GlobeView })));
 import { PrintableGenogram } from '../components/PrintableGenogram.js';
 import { Branch } from '../../../shared/brand/Logo.js';
 import { toast } from '../../../shared/stores/toast.js';
@@ -27,7 +28,7 @@ export function TreePage() {
     enabled: !!id,
   });
 
-  const [view, setView] = useState<'tree' | 'list'>('tree');
+  const [view, setView] = useState<'tree' | 'list' | 'globe'>('tree');
   const [openPerson, setOpenPerson] = useState<PersonDto | null>(null);
   const [quickAdd, setQuickAdd] = useState<Relation | null>(null);
   const [showShare, setShowShare] = useState(false);
@@ -171,10 +172,19 @@ export function TreePage() {
                 >
                   Lista
                 </button>
+                <button
+                  onClick={() => setView('globe')}
+                  className={`rounded-full px-4 py-1.5 font-sans transition ${
+                    view === 'globe' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+                  }`}
+                >
+                  Globo 3D
+                </button>
               </div>
               <p className="font-sans text-xs italic text-ink-500">
                 {view === 'tree' && 'Arrastra para mover · rueda o ＋－ para zoom · pasa el cursor sobre una tarjeta y usa "+ Agregar familiar".'}
                 {view === 'list' && 'Lista ordenada — útil para buscar.'}
+                {view === 'globe' && 'Orígenes de tu familia en un globo real · arrastra para girar · agrega lugar al editar a una persona.'}
               </p>
             </div>
 
@@ -198,6 +208,18 @@ export function TreePage() {
                 relationships={tree.relationships}
                 onSelect={setOpenPerson}
               />
+            )}
+
+            {view === 'globe' && (
+              <Suspense
+                fallback={
+                  <div className="flex h-[78vh] items-center justify-center rounded-2xl border border-paper-300 bg-ink-950 font-mono text-xs uppercase tracking-widest text-paper-100/70">
+                    Cargando globo 3D…
+                  </div>
+                }
+              >
+                <GlobeView persons={tree.persons} />
+              </Suspense>
             )}
           </>
         )}

@@ -23,6 +23,9 @@ export interface PersonDto {
   birthDate: string | null;
   deathDate: string | null;
   birthPlace: string | null;
+  birthCountry: string | null;
+  birthLat: number | null;
+  birthLng: number | null;
   bloodType: string | null;
   isProband: boolean;
   photoMediaId: string | null;
@@ -72,11 +75,14 @@ export const addPerson = (treeId: string, input: PersonCreateInput) =>
 
 export const updatePerson = (
   id: string,
-  input: Omit<Partial<PersonCreateInput>, 'birthDate' | 'deathDate'> & {
+  input: Omit<Partial<PersonCreateInput>, 'birthDate' | 'deathDate' | 'birthLat' | 'birthLng'> & {
     bloodType?: string;
     notes?: string;
     birthDate?: Date | null;
     deathDate?: Date | null;
+    birthCountry?: string;
+    birthLat?: number | null;
+    birthLng?: number | null;
   },
 ) =>
   http<{ data: PersonDto }>(`/api/persons/${id}`, {

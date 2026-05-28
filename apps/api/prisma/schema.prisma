@@ -261,6 +261,9 @@ model person {
   death_date                                       DateTime?           @db.Date
   is_alive                                         Boolean?            @default(dbgenerated("(death_date IS NULL)"))
   birth_place                                      String?
+  birth_country                                    String?
+  birth_lat                                        Float?
+  birth_lng                                        Float?
   blood_type                                       String?
   is_proband                                       Boolean             @default(false)
   photo_media_id                                   String?             @db.Uuid

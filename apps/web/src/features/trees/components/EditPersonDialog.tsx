@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, ErrorAlert, Field, Input } from '../../../shared/components/ui.js';
 import { DateField } from '../../../shared/components/DateField.js';
+import { PlaceSearch, type PlaceValue } from './PlaceSearch.js';
 import * as api from '../api/trees.js';
 import type { PersonDto } from '../api/trees.js';
 import { toast } from '../../../shared/stores/toast.js';
@@ -27,6 +28,12 @@ export function EditPersonDialog({
   const [birthDate, setBirthDate] = useState(person.birthDate?.slice(0, 10) ?? '');
   const [isAlive, setIsAlive] = useState(!person.deathDate);
   const [deathDate, setDeathDate] = useState(person.deathDate?.slice(0, 10) ?? '');
+  const [place, setPlace] = useState<PlaceValue | null>(
+    person.birthLat != null && person.birthLng != null
+      ? { display: person.birthPlace ?? '', country: person.birthCountry, lat: person.birthLat, lng: person.birthLng }
+      : null,
+  );
+  const [placeTouched, setPlaceTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,6 +51,16 @@ export function EditPersonDialog({
         gender: (gender || 'unknown') as 'male' | 'female' | 'nonbinary' | 'unknown',
         birthDate: birthDate ? new Date(birthDate) : null,
         deathDate: !isAlive && deathDate ? new Date(deathDate) : null,
+        ...(placeTouched
+          ? place
+            ? {
+                birthPlace: place.display.slice(0, 120),
+                birthCountry: place.country ?? '',
+                birthLat: place.lat,
+                birthLng: place.lng,
+              }
+            : { birthPlace: '', birthCountry: '', birthLat: null, birthLng: null }
+          : {}),
       }),
     onSuccess: () => {
       toast.success('Datos actualizados');
@@ -121,6 +138,20 @@ export function EditPersonDialog({
           </Field>
 
           <DateField label="Fecha de nacimiento" hint="día y mes opcionales" value={birthDate} onChange={setBirthDate} />
+
+          <Field label="Lugar de origen" hint="aparece en el globo 3D">
+            <PlaceSearch
+              value={place?.display ?? null}
+              onSelect={(p) => {
+                setPlace(p);
+                setPlaceTouched(true);
+              }}
+              onClear={() => {
+                setPlace(null);
+                setPlaceTouched(true);
+              }}
+            />
+          </Field>
 
           <div className="rounded-xl border border-paper-300 bg-paper-100 px-4 py-3">
             <label className="flex items-center gap-3 font-sans text-sm">

@@ -112,6 +112,9 @@ export function personDto(p: {
   birth_date: Date | null;
   death_date: Date | null;
   birth_place: string | null;
+  birth_country?: string | null;
+  birth_lat?: number | null;
+  birth_lng?: number | null;
   blood_type: string | null;
   is_proband: boolean;
   photo_media_id: string | null;
@@ -134,6 +137,9 @@ export function personDto(p: {
     birthDate: p.birth_date?.toISOString().slice(0, 10) ?? null,
     deathDate: p.death_date?.toISOString().slice(0, 10) ?? null,
     birthPlace: p.birth_place,
+    birthCountry: p.birth_country ?? null,
+    birthLat: p.birth_lat ?? null,
+    birthLng: p.birth_lng ?? null,
     bloodType: p.blood_type,
     isProband: p.is_proband,
     photoMediaId: p.photo_media_id,

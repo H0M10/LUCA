@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, ErrorAlert, Field, Input } from '../../../shared/components/ui.js';
 import { DateField } from '../../../shared/components/DateField.js';
+import { PlaceSearch } from './PlaceSearch.js';
 import * as api from '../api/trees.js';
 import type { PersonDto } from '../api/trees.js';
 import { toast } from '../../../shared/stores/toast.js';
@@ -120,6 +121,7 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
   const [birthDate, setBirthDate] = useState('');
   const [isAlive, setIsAlive] = useState(true);
   const [deathDate, setDeathDate] = useState('');
+  const [place, setPlace] = useState<{ display: string; country: string | null; lat: number; lng: number } | null>(null);
   const [showMore, setShowMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const subCfg = subtypeOptions(relation);
@@ -145,6 +147,14 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
         ...(gender ? { gender: gender as 'male' | 'female' | 'nonbinary' | 'unknown' } : {}),
         ...(birthDate ? { birthDate: new Date(birthDate) } : {}),
         ...(!isAlive && deathDate ? { deathDate: new Date(deathDate) } : {}),
+        ...(place
+          ? {
+              birthPlace: place.display.slice(0, 120),
+              ...(place.country ? { birthCountry: place.country } : {}),
+              birthLat: place.lat,
+              birthLng: place.lng,
+            }
+          : {}),
         ...(relation.kind === 'self' ? { isProband: true } : {}),
       };
       const newPerson = await api.addPerson(treeId, personInput);
@@ -342,6 +352,14 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
                 value={birthDate}
                 onChange={setBirthDate}
               />
+
+              <Field label="Lugar de origen" hint="aparece en el globo 3D">
+                <PlaceSearch
+                  value={place?.display ?? null}
+                  onSelect={setPlace}
+                  onClear={() => setPlace(null)}
+                />
+              </Field>
 
               <div className="rounded-sm border border-paper-300 bg-paper-100 px-4 py-3">
                 <label className="flex items-center gap-3 font-sans text-sm">
