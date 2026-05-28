@@ -5,6 +5,7 @@ import { validateBody, validateParams } from '../../middlewares/validate.js';
 import { TreeCreateSchema, TreeUpdateSchema } from '@genograma/shared';
 import * as svc from './trees.service.js';
 import * as members from './members.service.js';
+import * as summary from './summary.service.js';
 
 export const treesRouter: RouterType = Router();
 treesRouter.use(authenticate);
@@ -120,3 +121,25 @@ treesRouter.delete(
     }
   },
 );
+
+// ───────── Resumen clínico familiar ─────────
+treesRouter.get('/:id/summary', validateParams(IdParam), async (req, res, next) => {
+  try {
+    const data = await summary.familyMedicalSummary(req.params.id!, req.user!.id);
+    res.json({ data });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ───────── Export GEDCOM ─────────
+treesRouter.get('/:id/export/gedcom', validateParams(IdParam), async (req, res, next) => {
+  try {
+    const ged = await summary.exportGedcom(req.params.id!, req.user!.id);
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="luca-${req.params.id!.slice(0, 8)}.ged"`);
+    res.send(ged);
+  } catch (e) {
+    next(e);
+  }
+});
