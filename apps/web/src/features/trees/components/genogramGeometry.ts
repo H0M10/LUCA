@@ -74,73 +74,163 @@ export function computeLayout(persons: PersonDto[], rels: RelationshipDto[]): La
       (parentsOf.get(r.toPersonId) ?? parentsOf.set(r.toPersonId, []).get(r.toPersonId)!).push(r.fromPersonId);
     });
 
+  // Conjunto "de sangre": alcanzable desde el proband SOLO por relaciones
+  // padre-hijo (ancestros + descendientes). Las parejas que entran por
+  // matrimonio NO son de sangre → se acomodan al lado, sin mover la columna.
+  const blood = new Set<string>([proband.id]);
+  {
+    const q = [proband.id];
+    while (q.length) {
+      const id = q.shift()!;
+      for (const r of rels) {
+        if (r.type !== 'parent') continue;
+        if (r.toPersonId === id && !blood.has(r.fromPersonId)) {
+          blood.add(r.fromPersonId);
+          q.push(r.fromPersonId);
+        }
+        if (r.fromPersonId === id && !blood.has(r.toPersonId)) {
+          blood.add(r.toPersonId);
+          q.push(r.toPersonId);
+        }
+      }
+    }
+  }
+
   const gens = [...byGen.keys()].sort((a, b) => b - a); // ancestros primero
   const maxGen = gens[0] ?? 0;
   const minGen = gens[gens.length - 1] ?? 0;
 
-  // Orden por generación (top-down): parejas juntas + hijos bajo sus padres
-  const indexOf = new Map<string, number>();
-  const unitsByGen = new Map<number, string[][]>();
+  // Unidades: cada una tiene un ANCLA de sangre y a su lado las parejas que se
+  // casaron con esa persona. El ancla es lo que se centra bajo sus padres.
+  interface Unit {
+    members: string[];
+    anchorIdx: number;
+    x: number;
+  }
+  const unitsByGen = new Map<number, Unit[]>();
+  const unitOf = new Map<string, Unit>();
 
   for (const g of gens) {
     const ids = byGen.get(g)!;
-    const keyOf = (id: string) => {
-      const ps = (parentsOf.get(id) ?? []).filter((pid) => genById.get(pid) === g + 1 && indexOf.has(pid));
-      if (ps.length === 0) return Number.POSITIVE_INFINITY;
-      return ps.reduce((s, pid) => s + indexOf.get(pid)!, 0) / ps.length;
-    };
-    const orig = new Map(ids.map((id, i) => [id, i]));
-    const sorted = [...ids].sort((a, b) => keyOf(a) - keyOf(b) || orig.get(a)! - orig.get(b)!);
-
     const placed = new Set<string>();
-    const units: string[][] = [];
-    for (const id of sorted) {
+    const units: Unit[] = [];
+    // 1) Personas de sangre, con sus parejas (no de sangre) adjuntas a la derecha.
+    for (const id of ids) {
+      if (placed.has(id) || !blood.has(id)) continue;
+      const members = [id];
+      placed.add(id);
+      for (const pid of partnerOf.get(id) ?? []) {
+        if (genById.get(pid) === g && !blood.has(pid) && !placed.has(pid)) {
+          members.push(pid);
+          placed.add(pid);
+        }
+      }
+      const unit: Unit = { members, anchorIdx: 0, x: 0 };
+      members.forEach((m) => unitOf.set(m, unit));
+      units.push(unit);
+    }
+    // 2) Restantes: se adjuntan a la unidad de su pareja si existe; si no, unidad propia.
+    for (const id of ids) {
       if (placed.has(id)) continue;
-      const mate = [...(partnerOf.get(id) ?? [])].find((pid) => genById.get(pid) === g && !placed.has(pid));
-      if (mate) {
-        units.push([id, mate]);
+      let attached = false;
+      for (const pid of partnerOf.get(id) ?? []) {
+        const u = unitOf.get(pid);
+        if (u && genById.get(pid) === g) {
+          u.members.push(id);
+          unitOf.set(id, u);
+          placed.add(id);
+          attached = true;
+          break;
+        }
+      }
+      if (!attached) {
+        const unit: Unit = { members: [id], anchorIdx: 0, x: 0 };
+        unitOf.set(id, unit);
         placed.add(id);
-        placed.add(mate);
-      } else {
-        units.push([id]);
-        placed.add(id);
+        units.push(unit);
       }
     }
     unitsByGen.set(g, units);
-    const ordered: string[] = [];
-    units.forEach((u) => u.forEach((id) => ordered.push(id)));
-    ordered.forEach((id, i) => indexOf.set(id, i));
   }
 
-  const unitWidth = (u: string[]) => u.length * NODE_W + (u.length - 1) * COUPLE_GAP;
-  const rowWidth = (units: string[][]) =>
-    units.reduce((s, u) => s + unitWidth(u), 0) + Math.max(0, units.length - 1) * GAP_X;
-  let maxRow = 0;
-  for (const units of unitsByGen.values()) maxRow = Math.max(maxRow, rowWidth(units));
+  const unitWidth = (u: Unit) => u.members.length * NODE_W + (u.members.length - 1) * COUPLE_GAP;
+  const anchorOffset = (u: Unit) => u.anchorIdx * (NODE_W + COUPLE_GAP) + NODE_W / 2;
 
   const posById = new Map<string, { x: number; y: number; gen: number }>();
-  for (const g of gens) {
-    const units = unitsByGen.get(g)!;
+  const cardCenter = (id: string) => {
+    const p = posById.get(id);
+    return p ? p.x + NODE_W / 2 : null;
+  };
+
+  // Colocar de ARRIBA (ancestros) hacia ABAJO; cada unidad se centra bajo sus padres.
+  for (let gi = 0; gi < gens.length; gi++) {
+    const g = gens[gi]!;
     const y = PAD + (maxGen - g) * (NODE_H + GAP_Y);
-    let x = PAD + (maxRow - rowWidth(units)) / 2;
-    for (const u of units) {
-      for (const id of u) {
-        posById.set(id, { x, y, gen: g });
-        x += NODE_W + COUPLE_GAP;
+    const units = unitsByGen.get(g)!;
+
+    if (gi === 0) {
+      let cursor = 0;
+      for (const u of units) {
+        u.x = cursor;
+        cursor += unitWidth(u) + GAP_X;
       }
-      x += -COUPLE_GAP + GAP_X;
+    } else {
+      const desired = (u: Unit) => {
+        const anchor = u.members[u.anchorIdx]!;
+        const cs = (parentsOf.get(anchor) ?? [])
+          .map(cardCenter)
+          .filter((v): v is number => v != null);
+        return cs.length ? cs.reduce((s, v) => s + v, 0) / cs.length : Number.POSITIVE_INFINITY;
+      };
+      const ordered = units.map((u) => ({ u, d: desired(u) })).sort((a, b) => a.d - b.d);
+      let cursorRight = Number.NEGATIVE_INFINITY;
+      for (const { u, d } of ordered) {
+        const base =
+          d === Number.POSITIVE_INFINITY
+            ? cursorRight > Number.NEGATIVE_INFINITY
+              ? cursorRight + GAP_X + anchorOffset(u)
+              : anchorOffset(u)
+            : d;
+        let x = base - anchorOffset(u);
+        if (cursorRight > Number.NEGATIVE_INFINITY) x = Math.max(x, cursorRight + GAP_X);
+        u.x = x;
+        cursorRight = x + unitWidth(u);
+      }
     }
-    generations.set(g, units.flat());
+
+    for (const u of units) {
+      let cx = u.x;
+      for (const id of u.members) {
+        posById.set(id, { x: cx, y, gen: g });
+        cx += NODE_W + COUPLE_GAP;
+      }
+    }
+    generations.set(g, units.flatMap((u) => u.members));
   }
 
+  // Normalizar para que el mínimo x sea PAD.
+  let minX = Infinity;
+  let maxX = -Infinity;
+  for (const p of posById.values()) {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x + NODE_W);
+  }
+  if (minX === Infinity) {
+    minX = PAD;
+    maxX = PAD;
+  }
+  const shift = PAD - minX;
+  for (const p of posById.values()) p.x += shift;
+
   const span = maxGen - minGen;
-  const maxPerGen = Math.max(1, Math.ceil((maxRow + GAP_X) / (NODE_W + GAP_X)));
+  const contentW = maxX - minX;
+  const maxPerGen = Math.max(1, Math.ceil((contentW + GAP_X) / (NODE_W + GAP_X)));
   return {
     generations,
     posById,
     maxGen: span,
     maxPerGen,
-    width: PAD * 2 + maxRow,
+    width: PAD * 2 + contentW,
     height: PAD * 2 + (span + 1) * NODE_H + span * GAP_Y,
   };
 }
