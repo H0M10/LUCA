@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { PersonDto, RelationshipDto } from '../api/trees.js';
 import type { Relation } from './QuickAddDialog.js';
+import { PersonAvatar } from './PersonAvatar.js';
 
 interface Props {
   persons: PersonDto[];
@@ -182,7 +183,7 @@ function FocusedCard({ person }: { person: PersonDto }) {
         Enfocado
       </div>
       <div className="flex items-center gap-3">
-        <PersonSymbol gender={person.gender} dead={dead} size={48} />
+        <PersonAvatar person={person} size={48} />
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-display text-xl font-light leading-tight text-ink-900">
             {person.firstName}
@@ -222,7 +223,7 @@ function ParentSlot({
           className="group flex w-44 animate-fade-up flex-col items-center gap-1 border border-paper-300 bg-paper-50 px-3 py-2.5 transition hover:-translate-y-0.5 hover:border-ink-900 hover:shadow-paper-lg"
         >
           <div className="flex items-center gap-2">
-            <PersonSymbol gender={person.gender} dead={!!person.deathDate} size={28} />
+            <PersonAvatar person={person} size={28} />
             <span className="truncate font-display text-base text-ink-900 group-hover:text-moss-700">
               {person.firstName}
             </span>
@@ -270,7 +271,7 @@ function RelativeStack({
             className="group flex animate-fade-up items-center gap-2 border border-paper-300 bg-paper-50 px-3 py-1.5 transition hover:-translate-y-0.5 hover:border-ink-900"
             style={{ animationDelay: `${i * 0.05}s` }}
           >
-            <PersonSymbol gender={p.gender} dead={!!p.deathDate} size={20} />
+            <PersonAvatar person={p} size={20} />
             <span className="font-display text-sm text-ink-900 group-hover:text-moss-700">
               {p.firstName}
             </span>
@@ -309,7 +310,7 @@ function ChildrenRow({
             className="group flex w-32 animate-fade-up flex-col items-center gap-1 border border-paper-300 bg-paper-50 px-3 py-2.5 transition hover:-translate-y-0.5 hover:border-ink-900 hover:shadow-paper-lg"
             style={{ animationDelay: `${i * 0.07}s` }}
           >
-            <PersonSymbol gender={p.gender} dead={!!p.deathDate} size={28} />
+            <PersonAvatar person={p} size={28} />
             <span className="truncate font-display text-sm text-ink-900 group-hover:text-moss-700">
               {p.firstName}
             </span>
@@ -324,25 +325,6 @@ function ChildrenRow({
         </button>
       </div>
     </div>
-  );
-}
-
-function PersonSymbol({ gender, dead, size = 24 }: { gender: string | null; dead: boolean; size?: number }) {
-  const color = dead ? '#A89F8E' : '#1F1A14';
-  const s = size;
-  const symbol =
-    gender === 'female' ? (
-      <circle cx={s / 2} cy={s / 2} r={s / 2 - 1.5} fill="none" stroke={color} strokeWidth="1.5" />
-    ) : gender === 'male' ? (
-      <rect x="1.5" y="1.5" width={s - 3} height={s - 3} fill="none" stroke={color} strokeWidth="1.5" />
-    ) : (
-      <path d={`M ${s / 2} 1.5 L ${s - 1.5} ${s / 2} L ${s / 2} ${s - 1.5} L 1.5 ${s / 2} Z`} fill="none" stroke={color} strokeWidth="1.5" />
-    );
-  return (
-    <svg viewBox={`0 0 ${s} ${s}`} width={s} height={s} className="shrink-0">
-      {symbol}
-      {dead && <line x1="2" y1="2" x2={s - 2} y2={s - 2} stroke={color} strokeWidth="1.5" />}
-    </svg>
   );
 }
 

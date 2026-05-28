@@ -26,10 +26,11 @@ function inferGender(r: Relation): 'male' | 'female' | undefined {
   return undefined;
 }
 
-function inferLastName(r: Relation): string {
-  if (r.kind === 'child') return r.parent.lastName ?? '';
-  if (r.kind === 'sibling') return r.of.lastName ?? '';
-  return '';
+function inferApellidos(r: Relation): { paterno: string; materno: string } {
+  // Por convención, hijos y hermanos suelen compartir los apellidos del contexto.
+  if (r.kind === 'child') return { paterno: r.parent.apellidoPaterno ?? '', materno: r.parent.apellidoMaterno ?? '' };
+  if (r.kind === 'sibling') return { paterno: r.of.apellidoPaterno ?? '', materno: r.of.apellidoMaterno ?? '' };
+  return { paterno: '', materno: '' };
 }
 
 function meta(r: Relation): {
@@ -86,8 +87,10 @@ function meta(r: Relation): {
 
 export function QuickAddDialog({ treeId, relation, onClose }: Props) {
   const qc = useQueryClient();
+  const inferred = inferApellidos(relation);
   const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState(inferLastName(relation));
+  const [apellidoPaterno, setApellidoPaterno] = useState(inferred.paterno);
+  const [apellidoMaterno, setApellidoMaterno] = useState(inferred.materno);
   const [gender, setGender] = useState<'male' | 'female' | 'nonbinary' | 'unknown' | ''>(
     inferGender(relation) ?? '',
   );
@@ -112,7 +115,8 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
     mutationFn: async () => {
       const personInput = {
         firstName: firstName.trim(),
-        ...(lastName.trim() ? { lastName: lastName.trim() } : {}),
+        ...(apellidoPaterno.trim() ? { apellidoPaterno: apellidoPaterno.trim() } : {}),
+        ...(apellidoMaterno.trim() ? { apellidoMaterno: apellidoMaterno.trim() } : {}),
         ...(gender ? { gender: gender as 'male' | 'female' | 'nonbinary' | 'unknown' } : {}),
         ...(birthDate ? { birthDate: new Date(birthDate) } : {}),
         ...(!isAlive && deathDate ? { deathDate: new Date(deathDate) } : {}),
@@ -212,9 +216,9 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
           autoComplete="off"
           className="space-y-5 px-6 py-6"
         >
-          {/* Bloque mínimo — solo nombre */}
-          <div className="grid grid-cols-2 gap-4">
-            <Field number="01" label="Nombre">
+          {/* Bloque mínimo — nombre + apellidos (estilo mexicano) */}
+          <div className="space-y-4">
+            <Field number="01" label="Nombre(s)">
               <Input
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -223,14 +227,24 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
                 placeholder={relation.kind === 'self' ? 'Tu nombre' : 'Su nombre'}
               />
             </Field>
-            <Field label="Apellido" hint="opcional">
-              <Input
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                autoComplete="off"
-                placeholder={lastName ? '' : 'Apellido'}
-              />
-            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Apellido paterno" hint="opcional">
+                <Input
+                  value={apellidoPaterno}
+                  onChange={(e) => setApellidoPaterno(e.target.value)}
+                  autoComplete="off"
+                  placeholder="Paterno"
+                />
+              </Field>
+              <Field label="Apellido materno" hint="opcional">
+                <Input
+                  value={apellidoMaterno}
+                  onChange={(e) => setApellidoMaterno(e.target.value)}
+                  autoComplete="off"
+                  placeholder="Materno"
+                />
+              </Field>
+            </div>
           </div>
 
           {m.hint && (

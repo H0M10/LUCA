@@ -41,13 +41,27 @@
    PRINT — solo muestra el genograma limpio.
    Todo lo demás (nav, toolbar, botones add, footer, banners) se oculta.
    ============================================ */
+/* Bloque exclusivo de impresión: oculto en pantalla, visible al imprimir */
+.print-only { display: none; }
+
 @media print {
-  @page { margin: 1.5cm; size: landscape; }
+  @page { margin: 1.2cm; size: landscape; }
   body {
     background: white !important;
     color: black !important;
   }
   body::before { display: none !important; }
+
+  /* En impresión: ocultar las vistas interactivas y mostrar el árbol completo */
+  .screen-only { display: none !important; }
+  .print-only { display: block !important; }
+
+  /* El árbol completo no debe partirse entre páginas (evita "una persona por hoja") */
+  .print-only,
+  .print-only svg {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 
   /* Oculta TODO lo que tenga la clase no-print o sea UI */
   .no-print,
@@ -128,33 +142,19 @@
 
   body {
     @apply bg-paper-100 text-ink-900;
-    font-feature-settings: 'kern', 'liga', 'ss01';
-    background-image:
-      radial-gradient(at 15% 10%, rgba(217, 182, 121, 0.08) 0px, transparent 50%),
-      radial-gradient(at 90% 80%, rgba(61, 82, 64, 0.05) 0px, transparent 50%);
-    background-attachment: fixed;
-  }
-
-  /* Subtle paper grain over everything */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-    opacity: var(--grain-opacity);
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' /%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    font-feature-settings: 'kern', 'liga';
+    /* Flat design: fondo sólido gris muy claro, sin texturas ni gradientes */
   }
 
   ::selection {
-    background-color: #3D5240;
-    color: #FBF8F1;
+    background-color: #42A7A5;
+    color: #FFFFFF;
   }
 
-  /* Display headings use Fraunces with proper variable axes */
+  /* Títulos en Poppins (sans moderna), pesos ligeros */
   h1, h2, h3, h4, .font-display {
-    font-family: 'Fraunces', Georgia, serif;
-    font-variation-settings: 'opsz' 144, 'SOFT' 30;
+    font-family: 'Poppins', system-ui, sans-serif;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -213,12 +213,12 @@
 
   /* Marker / highlight effect under text */
   .marker-moss {
-    background-image: linear-gradient(120deg, transparent 0%, transparent 35%, rgba(61, 82, 64, 0.18) 35%, rgba(61, 82, 64, 0.18) 100%);
+    background-image: linear-gradient(120deg, transparent 0%, transparent 35%, rgba(66, 167, 165, 0.20) 35%, rgba(66, 167, 165, 0.20) 100%);
   }
 
-  /* Paper card */
+  /* Tarjeta — blanca, muy redondeada, sombra ligera (HealthTech) */
   .card-paper {
-    @apply rounded-sm border border-paper-300 bg-paper-50 shadow-paper;
+    @apply rounded-2xl border border-paper-300 bg-paper-50 shadow-paper;
   }
 
   /* Stagger children animation */
@@ -239,9 +239,9 @@
   .text-balance { text-wrap: balance; }
   .text-pretty { text-wrap: pretty; }
 
-  /* Fraunces variable axes utilities */
-  .fr-soft { font-variation-settings: 'opsz' 144, 'SOFT' 100; }
-  .fr-italic { font-style: italic; font-variation-settings: 'opsz' 144, 'SOFT' 50; }
+  /* Énfasis (antes Fraunces) — ahora itálica sans simple */
+  .fr-soft { font-weight: 500; }
+  .fr-italic { font-style: italic; font-weight: 500; }
 
   /* Vertical text for editorial sidenotes */
   .vertical-rl {

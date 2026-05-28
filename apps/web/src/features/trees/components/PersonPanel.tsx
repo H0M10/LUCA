@@ -5,8 +5,10 @@ import * as api from '../api/trees.js';
 import * as medApi from '../../medical/api/medical.js';
 import type { PersonDto, RelationshipDto } from '../api/trees.js';
 import { QuickAddDialog, type Relation } from './QuickAddDialog.js';
+import { EditPersonDialog } from './EditPersonDialog.js';
 import { NotesAndTags } from './NotesAndTags.js';
 import { PhotoUpload } from './PhotoUpload.js';
+import { PersonAvatar } from './PersonAvatar.js';
 import { toast } from '../../../shared/stores/toast.js';
 
 interface Props {
@@ -24,6 +26,7 @@ const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 export function PersonPanel({ treeId, person, persons, relationships, onClose }: Props) {
   const qc = useQueryClient();
   const [addRelation, setAddRelation] = useState<Relation | null>(null);
+  const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<Tab>('family');
 
   const parents = relationships
@@ -71,7 +74,7 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
         {/* Header */}
         <div className="flex items-start justify-between border-b border-paper-300 bg-paper-100 px-6 py-5">
           <div className="flex items-start gap-4">
-            <PersonSymbol gender={person.gender} dead={!!person.deathDate} />
+            <PersonAvatar person={person} size={40} />
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-500">
                 Expediente № {person.id.slice(0, 8).toUpperCase()}
@@ -87,12 +90,21 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="font-mono text-xs uppercase tracking-widest text-ink-500 hover:text-ink-900"
-          >
-            ×
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={onClose}
+              className="font-mono text-xs uppercase tracking-widest text-ink-500 hover:text-ink-900"
+            >
+              ×
+            </button>
+            <button
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-moss-700/50 bg-moss-50 px-3 py-1 font-sans text-xs font-medium text-moss-700 transition hover:border-moss-700 hover:bg-moss-700 hover:text-white"
+              title="Editar nombre, fechas y género"
+            >
+              ✎ Editar
+            </button>
+          </div>
         </div>
 
         {/* Datos rápidos */}
@@ -183,6 +195,10 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
       {addRelation && (
         <QuickAddDialog treeId={treeId} relation={addRelation} onClose={() => setAddRelation(null)} />
       )}
+
+      {editing && (
+        <EditPersonDialog treeId={treeId} person={person} onClose={() => setEditing(false)} />
+      )}
     </>
   );
 }
@@ -239,24 +255,6 @@ function AddButton({ onClick, children }: { onClick: () => void; children: React
     >
       {children}
     </button>
-  );
-}
-
-function PersonSymbol({ gender, dead }: { gender: string | null; dead: boolean }) {
-  const color = dead ? '#A89F8E' : '#1F1A14';
-  const symbol =
-    gender === 'female' ? (
-      <circle cx="20" cy="20" r="17" fill="none" stroke={color} strokeWidth="2" />
-    ) : gender === 'male' ? (
-      <rect x="3" y="3" width="34" height="34" fill="none" stroke={color} strokeWidth="2" />
-    ) : (
-      <path d="M 20 3 L 37 20 L 20 37 L 3 20 Z" fill="none" stroke={color} strokeWidth="2" />
-    );
-  return (
-    <svg viewBox="0 0 40 40" className="h-10 w-10 shrink-0">
-      {symbol}
-      {dead && <line x1="4" y1="4" x2="36" y2="36" stroke={color} strokeWidth="2" />}
-    </svg>
   );
 }
 

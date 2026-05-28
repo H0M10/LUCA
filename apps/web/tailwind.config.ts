@@ -5,56 +5,68 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paper / warm cream surfaces
+        // Surfaces — blancos y grises claros (BioTech / HealthTech)
         paper: {
-          50: '#FBF8F1',
-          100: '#F5F1E8',
-          200: '#EDE6D5',
-          300: '#E5DDD0',
-          400: '#D6CCB8',
+          50: '#FFFFFF',  // blanco puro — tarjetas y formularios
+          100: '#F2F2F2', // gris fondo general
+          200: '#E8EBEF',
+          300: '#D9DDE3', // gris UI — bordes, líneas
+          400: '#C4CAD3', // borde medio
         },
-        // Warm ink (replaces slate/gray)
+        // Azul petróleo — texto, títulos, header/footer
         ink: {
-          50: '#F7F4EE',
-          100: '#E8E2D5',
-          300: '#A89F8E',
-          500: '#5E574E',
-          700: '#3A332B',
-          900: '#1F1A14',
-          950: '#15110C',
+          50: '#EAF1F4',
+          100: '#CBDCE3',
+          300: '#7796A3', // texto atenuado
+          500: '#3F6A7B', // texto secundario
+          700: '#1C5266', // oscuro
+          900: '#123F52', // azul petróleo principal
+          950: '#0C2A37', // más oscuro
         },
-        // Forest moss (replaces generic green/brand)
+        // Turquesa — botones, interacción, logo (acento primario)
         moss: {
-          50: '#EEF2EC',
-          100: '#D6DFD2',
-          300: '#8FA589',
-          500: '#5A7355',
-          600: '#465D42',
-          700: '#3D5240',
-          800: '#2D3D2E',
-          900: '#1F2A20',
+          50: '#E6F5F4',
+          100: '#C2E7E6',
+          300: '#86CFCD',
+          500: '#54B5B3',
+          600: '#48ACAA',
+          700: '#42A7A5', // turquesa principal
+          800: '#34807F',
+          900: '#265E5D',
         },
-        // Terracotta clay accent
+        // Coral suave — acciones destructivas / errores (la paleta no tiene rojo)
         clay: {
-          100: '#F3DECD',
-          300: '#E0A483',
-          500: '#C2613A',
-          600: '#A24E2C',
-          700: '#7E3A1E',
+          100: '#FBE3DE',
+          300: '#F0A99F',
+          500: '#E0685A',
+          600: '#CB5446',
+          700: '#A53F33',
         },
-        // Sand gold accent
+        // Verde hoja — ADN, ilustraciones, elementos orgánicos
         sand: {
-          100: '#F5E6C3',
-          300: '#E0C58E',
-          500: '#D9B679',
-          600: '#B69257',
-          700: '#8C6F3E',
+          100: '#E9F2DE',
+          300: '#C2DBA3',
+          500: '#8AB96B', // verde hoja principal
+          600: '#74A356',
+          700: '#5C8443',
         },
       },
       fontFamily: {
-        display: ['Fraunces', 'Georgia', 'serif'],
-        sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+        display: ['Poppins', 'system-ui', 'sans-serif'],
+        sans: ['"Open Sans"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+      },
+      borderRadius: {
+        // Bordes muy redondeados en toda la app (estilo HealthTech)
+        none: '0',
+        sm: '0.5rem',
+        DEFAULT: '0.75rem',
+        md: '0.875rem',
+        lg: '1rem',
+        xl: '1.25rem',
+        '2xl': '1.5rem',
+        '3xl': '2rem',
+        full: '9999px',
       },
       fontSize: {
         'display-xl': ['clamp(3rem, 8vw, 7rem)', { lineHeight: '0.95', letterSpacing: '-0.04em' }],
@@ -66,10 +78,11 @@ export default {
         widest: '0.25em',
       },
       boxShadow: {
-        'paper': '0 1px 0 rgba(31,26,20,0.04), 0 4px 24px -8px rgba(31,26,20,0.08)',
-        'paper-lg': '0 2px 0 rgba(31,26,20,0.04), 0 20px 50px -20px rgba(31,26,20,0.15)',
-        'ink': '4px 4px 0 rgba(31,26,20,1)',
-        'moss': '4px 4px 0 rgba(61,82,64,1)',
+        // Sombras muy ligeras y difuminadas (flat design)
+        'paper': '0 1px 2px rgba(18,63,82,0.04), 0 6px 20px -8px rgba(18,63,82,0.10)',
+        'paper-lg': '0 2px 4px rgba(18,63,82,0.05), 0 24px 50px -20px rgba(18,63,82,0.16)',
+        'ink': '0 8px 24px -8px rgba(18,63,82,0.35)',
+        'moss': '0 8px 22px -6px rgba(66,167,165,0.45)',
       },
       animation: {
         'fade-up': 'fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards',
@@ -117,16 +130,16 @@ export default {
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
         'pulse-soft': {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(61, 82, 64, 0.25)' },
-          '50%': { boxShadow: '0 0 0 8px rgba(61, 82, 64, 0)' },
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(66, 167, 165, 0.30)' },
+          '50%': { boxShadow: '0 0 0 8px rgba(66, 167, 165, 0)' },
         },
         'grow-in': {
           '0%': { opacity: '0', transform: 'translateY(12px) scale(0.85)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
         breath: {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(61, 82, 64, 0.4)' },
-          '50%': { boxShadow: '0 0 0 12px rgba(61, 82, 64, 0)' },
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(66, 167, 165, 0.45)' },
+          '50%': { boxShadow: '0 0 0 12px rgba(66, 167, 165, 0)' },
         },
         'draw-path': {
           '0%': { strokeDashoffset: '1000', opacity: '0' },

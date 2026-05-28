@@ -17,7 +17,8 @@ export async function createPerson(treeId: string, userId: string, input: Person
     data: {
       tree_id: treeId,
       first_name: input.firstName,
-      last_name: input.lastName ?? null,
+      apellido_paterno: input.apellidoPaterno ?? null,
+      apellido_materno: input.apellidoMaterno ?? null,
       alias: input.alias ?? null,
       gender: input.gender ?? null,
       birth_date: input.birthDate ?? null,
@@ -47,7 +48,8 @@ export async function updatePerson(
 
   const data: Record<string, unknown> = {};
   if (input.firstName !== undefined) data.first_name = input.firstName;
-  if (input.lastName !== undefined) data.last_name = input.lastName || null;
+  if (input.apellidoPaterno !== undefined) data.apellido_paterno = input.apellidoPaterno || null;
+  if (input.apellidoMaterno !== undefined) data.apellido_materno = input.apellidoMaterno || null;
   if (input.alias !== undefined) data.alias = input.alias || null;
   if (input.gender !== undefined) data.gender = input.gender || null;
   if (input.birthDate !== undefined) data.birth_date = input.birthDate ?? null;

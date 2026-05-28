@@ -105,6 +105,8 @@ export function personDto(p: {
   tree_id: string;
   first_name: string;
   last_name: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
   alias: string | null;
   gender: string | null;
   birth_date: Date | null;
@@ -117,11 +119,16 @@ export function personDto(p: {
   notes: string | null;
   tags: string[];
 }) {
+  // lastName se mantiene como apellidos combinados (paterno + materno) para
+  // que toda la UI de visualización siga funcionando sin cambios.
+  const apellidos = [p.apellido_paterno, p.apellido_materno].filter(Boolean).join(' ');
   return {
     id: p.id,
     treeId: p.tree_id,
     firstName: p.first_name,
-    lastName: p.last_name,
+    apellidoPaterno: p.apellido_paterno ?? null,
+    apellidoMaterno: p.apellido_materno ?? null,
+    lastName: apellidos || p.last_name || null,
     alias: p.alias,
     gender: p.gender,
     birthDate: p.birth_date?.toISOString().slice(0, 10) ?? null,

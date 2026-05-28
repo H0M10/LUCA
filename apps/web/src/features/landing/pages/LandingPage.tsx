@@ -104,11 +104,6 @@ export function LandingPage() {
 
           {/* RIGHT — video plate */}
           <div className="relative col-span-12 lg:col-span-6">
-            {/* Index number */}
-            <div className="absolute -left-2 -top-8 font-display text-[140px] font-light leading-none text-paper-300 md:-left-6 md:text-[200px]">
-              01
-            </div>
-
             <div className="relative">
               {/* Video sin marco, sin captions, sin interacción del usuario */}
               <video

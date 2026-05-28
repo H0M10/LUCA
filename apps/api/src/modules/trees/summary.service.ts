@@ -2,6 +2,17 @@ import { prisma } from '../../lib/prisma.js';
 import { Errors } from '../../lib/errors.js';
 import { assertAccess } from './trees.service.js';
 
+/** Nombre completo: Nombre + Apellido paterno + Apellido materno (fallback last_name). */
+function fullName(p: {
+  first_name: string;
+  last_name?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+}): string {
+  const apellidos = [p.apellido_paterno, p.apellido_materno].filter(Boolean).join(' ') || p.last_name || '';
+  return apellidos ? `${p.first_name} ${apellidos}` : p.first_name;
+}
+
 /**
  * Resumen clínico agregado del árbol — patrones hereditarios visibles.
  */
@@ -34,14 +45,14 @@ export async function familyMedicalSummary(treeId: string, userId: string) {
       const existing = conditionMap.get(key);
       if (existing) {
         existing.count++;
-        existing.persons.push(p.first_name + (p.last_name ? ` ${p.last_name}` : ''));
+        existing.persons.push(fullName(p));
       } else {
         conditionMap.set(key, {
           name,
           code: pc.medical_condition?.code ?? null,
           hereditary,
           count: 1,
-          persons: [p.first_name + (p.last_name ? ` ${p.last_name}` : '')],
+          persons: [fullName(p)],
         });
       }
     }
@@ -156,8 +167,9 @@ export async function exportGedcom(treeId: string, userId: string): Promise<stri
   // Individuals
   for (const p of tree.person) {
     const ged = personIdToGed.get(p.id)!;
+    const apellidos = [p.apellido_paterno, p.apellido_materno].filter(Boolean).join(' ') || p.last_name || '';
     lines.push(`0 @${ged}@ INDI`);
-    lines.push(`1 NAME ${p.first_name} /${p.last_name ?? ''}/`);
+    lines.push(`1 NAME ${p.first_name} /${apellidos}/`);
     if (p.gender === 'male') lines.push('1 SEX M');
     else if (p.gender === 'female') lines.push('1 SEX F');
     else lines.push('1 SEX U');

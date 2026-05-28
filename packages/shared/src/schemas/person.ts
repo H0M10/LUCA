@@ -7,15 +7,22 @@ import {
   RELATIONSHIP_TYPES,
 } from '../constants/index.js';
 
+/**
+ * Normaliza nombres al estilo de documento oficial mexicano:
+ * recorta extremos, colapsa espacios dobles y convierte a MAYÚSCULAS.
+ */
+export const normalizeName = (s: string): string => s.trim().replace(/\s+/g, ' ').toUpperCase();
+
 export const PersonCreateSchema = z
   .object({
-    firstName: z.string().min(1).max(80).trim(),
-    lastName: z.string().max(80).trim().optional(),
-    alias: z.string().max(80).trim().optional(),
+    firstName: z.string().min(1).max(80).transform(normalizeName),
+    apellidoPaterno: z.string().max(80).transform(normalizeName).optional(),
+    apellidoMaterno: z.string().max(80).transform(normalizeName).optional(),
+    alias: z.string().max(80).transform(normalizeName).optional(),
     gender: z.enum(GENDERS).optional(),
     birthDate: z.coerce.date().optional(),
     deathDate: z.coerce.date().optional(),
-    birthPlace: z.string().max(120).optional(),
+    birthPlace: z.string().max(120).trim().optional(),
     bloodType: z.enum(BLOOD_TYPES).optional(),
     isProband: z.boolean().optional(),
     notes: z.string().max(5000).optional(),
@@ -33,13 +40,14 @@ export type PersonCreateInput = z.infer<typeof PersonCreateSchema>;
  */
 export const PersonUpdateSchema = z
   .object({
-    firstName: z.string().min(1).max(80).trim().optional(),
-    lastName: z.string().max(80).trim().optional(),
-    alias: z.string().max(80).trim().optional(),
+    firstName: z.string().min(1).max(80).transform(normalizeName).optional(),
+    apellidoPaterno: z.string().max(80).transform(normalizeName).optional(),
+    apellidoMaterno: z.string().max(80).transform(normalizeName).optional(),
+    alias: z.string().max(80).transform(normalizeName).optional(),
     gender: z.enum(GENDERS).optional(),
     birthDate: z.coerce.date().nullable().optional(),
     deathDate: z.coerce.date().nullable().optional(),
-    birthPlace: z.string().max(120).optional(),
+    birthPlace: z.string().max(120).trim().optional(),
     bloodType: z.enum(BLOOD_TYPES).optional(),
     isProband: z.boolean().optional(),
     notes: z.string().max(5000).optional(),

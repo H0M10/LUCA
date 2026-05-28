@@ -253,6 +253,8 @@ model person {
   tree_id                                          String              @db.Uuid
   first_name                                       String
   last_name                                        String?
+  apellido_paterno                                 String?
+  apellido_materno                                 String?
   alias                                            String?
   gender                                           String?
   birth_date                                       DateTime?           @db.Date

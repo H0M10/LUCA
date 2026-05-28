@@ -15,6 +15,8 @@ export interface PersonDto {
   id: string;
   treeId: string;
   firstName: string;
+  apellidoPaterno: string | null;
+  apellidoMaterno: string | null;
   lastName: string | null;
   alias: string | null;
   gender: string | null;
@@ -68,7 +70,15 @@ export const addPerson = (treeId: string, input: PersonCreateInput) =>
     body: JSON.stringify(input),
   }).then((r) => r.data);
 
-export const updatePerson = (id: string, input: Partial<PersonCreateInput> & { bloodType?: string; notes?: string }) =>
+export const updatePerson = (
+  id: string,
+  input: Omit<Partial<PersonCreateInput>, 'birthDate' | 'deathDate'> & {
+    bloodType?: string;
+    notes?: string;
+    birthDate?: Date | null;
+    deathDate?: Date | null;
+  },
+) =>
   http<{ data: PersonDto }>(`/api/persons/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(input),

@@ -7,7 +7,7 @@ import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
 import { Button } from '../../../shared/components/ui.js';
 import { GenogramView } from '../components/GenogramView.js';
-import { FocusedTreeView } from '../components/FocusedTreeView.js';
+import { PrintableGenogram } from '../components/PrintableGenogram.js';
 import { Branch } from '../../../shared/brand/Logo.js';
 import { toast } from '../../../shared/stores/toast.js';
 import { QuickAddDialog, type Relation } from '../components/QuickAddDialog.js';
@@ -27,7 +27,7 @@ export function TreePage() {
     enabled: !!id,
   });
 
-  const [view, setView] = useState<'focused' | 'tree' | 'list'>('focused');
+  const [view, setView] = useState<'tree' | 'list'>('tree');
   const [openPerson, setOpenPerson] = useState<PersonDto | null>(null);
   const [quickAdd, setQuickAdd] = useState<Relation | null>(null);
   const [showShare, setShowShare] = useState(false);
@@ -108,13 +108,13 @@ export function TreePage() {
             >
               ↓ GEDCOM
             </button>
-            <button
+            <Button
+              variant="primary"
               onClick={() => window.print()}
-              className="link-underline font-mono text-[10px] uppercase tracking-widest text-ink-500 hover:text-ink-900"
-              title="Imprimir o guardar como PDF"
+              title="Genera un PDF con el árbol genealógico completo"
             >
-              ⎙ Imprimir
-            </button>
+              Generar PDF
+            </Button>
             <Button
               variant="ghost"
               onClick={() => {
@@ -128,7 +128,11 @@ export function TreePage() {
           </div>
         </header>
 
+        {/* Versión completa SOLO impresión — captura TODO el árbol al imprimir/PDF */}
+        <PrintableGenogram tree={tree} />
+
         {/* Empty state — "Empieza por ti" */}
+        <div className="screen-only">
         {tree.persons.length === 0 ? (
           <StartHereCard onStart={() => setQuickAdd({ kind: 'self' })} />
         ) : (
@@ -148,24 +152,16 @@ export function TreePage() {
               </div>
             )}
 
-            {/* Toggle vista — Enfocada (default), Genograma completo, Lista */}
+            {/* Toggle vista — Árbol completo navegable (default) / Lista */}
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div className="inline-flex rounded-full border border-paper-300 bg-paper-50 p-1 text-xs">
-                <button
-                  onClick={() => setView('focused')}
-                  className={`rounded-full px-4 py-1.5 font-sans transition ${
-                    view === 'focused' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
-                  }`}
-                >
-                  Enfocada
-                </button>
                 <button
                   onClick={() => setView('tree')}
                   className={`rounded-full px-4 py-1.5 font-sans transition ${
                     view === 'tree' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
                   }`}
                 >
-                  Genograma
+                  Árbol
                 </button>
                 <button
                   onClick={() => setView('list')}
@@ -177,20 +173,10 @@ export function TreePage() {
                 </button>
               </div>
               <p className="font-sans text-xs italic text-ink-500">
-                {view === 'focused' && 'Click sobre un familiar para navegar a él.'}
-                {view === 'tree' && 'Vista completa del árbol — para ver todo de una vez.'}
+                {view === 'tree' && 'Árbol completo — arrastra/scroll para navegar, zoom con ＋ －, click en una persona para ver/editar.'}
                 {view === 'list' && 'Lista ordenada — útil para buscar.'}
               </p>
             </div>
-
-            {view === 'focused' && (
-              <FocusedTreeView
-                persons={tree.persons}
-                relationships={tree.relationships}
-                onAdd={setQuickAdd}
-                onSelectPerson={setOpenPerson}
-              />
-            )}
 
             {view === 'tree' && (
               <GenogramView
@@ -198,6 +184,10 @@ export function TreePage() {
                 relationships={tree.relationships}
                 linkMode={null}
                 onSelectAsTarget={() => undefined}
+                onSelect={(personId) => {
+                  const p = tree.persons.find((x) => x.id === personId);
+                  if (p) setOpenPerson(p);
+                }}
                 onStartLink={(personId) => {
                   const p = tree.persons.find((x) => x.id === personId);
                   if (p) setOpenPerson(p);
@@ -218,18 +208,26 @@ export function TreePage() {
             )}
           </>
         )}
+        </div>
       </main>
       <Footer />
 
-      {openPerson && (
-        <PersonPanel
-          treeId={tree.id}
-          person={openPerson}
-          persons={tree.persons}
-          relationships={tree.relationships}
-          onClose={() => setOpenPerson(null)}
-        />
-      )}
+      {openPerson &&
+        (() => {
+          // Leer SIEMPRE la versión viva de la persona desde la query del árbol,
+          // así foto/sangre/notas se reflejan al instante sin recargar.
+          const live = tree.persons.find((p) => p.id === openPerson.id);
+          if (!live) return null; // fue eliminada → cerrar panel
+          return (
+            <PersonPanel
+              treeId={tree.id}
+              person={live}
+              persons={tree.persons}
+              relationships={tree.relationships}
+              onClose={() => setOpenPerson(null)}
+            />
+          );
+        })()}
 
       {quickAdd && (
         <QuickAddDialog

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Logo, Wordmark } from '../brand/Logo.js';
 import { useLogout, useMe } from '../../features/auth/hooks/useAuth.js';
 import { toast } from '../stores/toast.js';
@@ -7,19 +7,15 @@ import { toast } from '../stores/toast.js';
 export function Navbar() {
   const { data: me } = useMe();
   const [open, setOpen] = useState(false);
-  const loc = useLocation();
-  const onLanding = loc.pathname === '/';
 
   return (
-    <header
-      className={`sticky top-0 z-40 border-b backdrop-blur-md ${onLanding ? 'border-paper-300/60 bg-paper-100/85' : 'border-paper-300 bg-paper-50/95'}`}
-    >
+    <header className="sticky top-0 z-40 border-b border-ink-700/40 bg-ink-900/95 backdrop-blur-md">
       <nav className="editorial flex items-center justify-between py-4 md:py-5">
         <Link to={me ? '/dashboard' : '/'} className="group flex items-center gap-3">
-          <Logo className="h-9 w-9 transition-transform group-hover:rotate-3" />
+          <Logo className="h-9 w-9 transition-transform group-hover:rotate-3" tone="light" />
           <div className="flex items-baseline gap-2">
-            <Wordmark className="text-[22px] md:text-[26px]" />
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.3em] text-ink-500 sm:inline">
+            <Wordmark className="text-[22px] md:text-[26px]" tone="light" />
+            <span className="hidden font-mono text-[10px] uppercase tracking-[0.3em] text-paper-100/50 sm:inline">
               · 2026
             </span>
           </div>
@@ -47,12 +43,12 @@ export function Navbar() {
             <AvatarMenu name={me.fullName} email={me.email} />
           ) : (
             <>
-              <Link to="/login" className="link-underline font-sans text-sm font-medium text-ink-700">
+              <Link to="/login" className="font-sans text-sm font-medium text-paper-100/80 transition hover:text-white">
                 Entrar
               </Link>
               <Link
                 to="/register"
-                className="group inline-flex items-center gap-2 rounded-full bg-ink-900 px-5 py-2.5 font-sans text-sm font-medium text-paper-50 transition hover:bg-moss-700"
+                className="group inline-flex items-center gap-2 rounded-full bg-moss-700 px-5 py-2.5 font-sans text-sm font-semibold text-white shadow-moss transition hover:-translate-y-0.5 hover:bg-moss-600"
               >
                 Crear cuenta
                 <span className="transition-transform group-hover:translate-x-0.5">→</span>
@@ -64,20 +60,20 @@ export function Navbar() {
         {/* Mobile toggle */}
         <button
           onClick={() => setOpen(!open)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-ink-300 md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-paper-100/30 md:hidden"
           aria-label="Menú"
         >
           <div className="flex flex-col gap-1.5">
-            <span className={`block h-px w-5 bg-ink-900 transition ${open ? 'translate-y-[7px] rotate-45' : ''}`} />
-            <span className={`block h-px w-5 bg-ink-900 transition ${open ? 'opacity-0' : ''}`} />
-            <span className={`block h-px w-5 bg-ink-900 transition ${open ? '-translate-y-[7px] -rotate-45' : ''}`} />
+            <span className={`block h-px w-5 bg-white transition ${open ? 'translate-y-[7px] rotate-45' : ''}`} />
+            <span className={`block h-px w-5 bg-white transition ${open ? 'opacity-0' : ''}`} />
+            <span className={`block h-px w-5 bg-white transition ${open ? '-translate-y-[7px] -rotate-45' : ''}`} />
           </div>
         </button>
       </nav>
 
       {/* Mobile menu */}
       {open && (
-        <div className="border-t border-paper-300 bg-paper-50 md:hidden">
+        <div className="border-t border-ink-700/40 bg-ink-950 md:hidden">
           <div className="editorial flex flex-col gap-4 py-6">
             {me ? (
               <>
@@ -87,15 +83,15 @@ export function Navbar() {
             ) : (
               <>
                 <MobileLink to="/" onClick={() => setOpen(false)}>Inicio</MobileLink>
-                <Link to="/#nosotros" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Nosotros</Link>
-                <Link to="/#valores" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Valores</Link>
-                <Link to="/#metodo" onClick={() => setOpen(false)} className="font-display text-2xl text-ink-900">Método</Link>
-                <div className="mt-4 flex flex-col gap-2 border-t border-paper-300 pt-4">
-                  <Link to="/login" onClick={() => setOpen(false)} className="text-base font-medium text-ink-700">Entrar</Link>
+                <Link to="/#nosotros" onClick={() => setOpen(false)} className="font-display text-2xl text-white">Nosotros</Link>
+                <Link to="/#valores" onClick={() => setOpen(false)} className="font-display text-2xl text-white">Valores</Link>
+                <Link to="/#metodo" onClick={() => setOpen(false)} className="font-display text-2xl text-white">Método</Link>
+                <div className="mt-4 flex flex-col gap-2 border-t border-ink-700/40 pt-4">
+                  <Link to="/login" onClick={() => setOpen(false)} className="text-base font-medium text-paper-100/80">Entrar</Link>
                   <Link
                     to="/register"
                     onClick={() => setOpen(false)}
-                    className="inline-flex w-fit items-center gap-2 rounded-full bg-ink-900 px-5 py-2.5 text-sm font-medium text-paper-50"
+                    className="inline-flex w-fit items-center gap-2 rounded-full bg-moss-700 px-5 py-2.5 text-sm font-semibold text-white shadow-moss"
                   >
                     Crear cuenta →
                   </Link>
@@ -115,7 +111,7 @@ function NavItem({ to, end, children }: { to: string; end?: boolean; children: R
       to={to}
       end={end}
       className={({ isActive }) =>
-        `link-underline font-sans text-sm ${isActive ? 'font-medium text-ink-900' : 'text-ink-500 hover:text-ink-900'}`
+        `font-sans text-sm transition ${isActive ? 'font-semibold text-white' : 'text-paper-100/75 hover:text-white'}`
       }
     >
       {children}
@@ -125,7 +121,7 @@ function NavItem({ to, end, children }: { to: string; end?: boolean; children: R
 
 function HashItem({ to, children }: { to: string; children: React.ReactNode }) {
   return (
-    <Link to={to} className="link-underline font-sans text-sm text-ink-500 hover:text-ink-900">
+    <Link to={to} className="font-sans text-sm text-paper-100/75 transition hover:text-white">
       {children}
     </Link>
   );
@@ -133,7 +129,7 @@ function HashItem({ to, children }: { to: string; children: React.ReactNode }) {
 
 function MobileLink({ to, onClick, children }: { to: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <Link to={to} onClick={onClick} className="font-display text-2xl text-ink-900">
+    <Link to={to} onClick={onClick} className="font-display text-2xl text-white">
       {children}
     </Link>
   );
@@ -158,7 +154,7 @@ function AvatarMenu({ name, email }: { name: string; email: string }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-ink-900 bg-ink-900 font-display text-base font-medium text-paper-50 transition hover:bg-moss-700 hover:border-moss-700"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-moss-700 font-display text-base font-semibold text-white shadow-moss transition hover:bg-moss-600"
         title={name}
       >
         {name?.[0]?.toUpperCase() ?? '?'}
