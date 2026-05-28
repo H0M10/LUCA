@@ -181,6 +181,11 @@ export function GenogramView({ persons, relationships, linkMode, onSelectAsTarge
                 const w = live ? 3.4 : 2.4;
                 return (
                   <g key={`cg-${gi}`}>
+                    {grp.parentBar &&
+                      seg({ x1: grp.parentBar.x1, y1: grp.parentBar.y, x2: grp.parentBar.x2, y2: grp.parentBar.y }, `pb-${gi}`, C_BIO, w, false, dim)}
+                    {grp.parentStubs.map((s, si) =>
+                      seg({ x1: s.x, y1: s.fromY, x2: s.x, y2: s.toY }, `ps-${gi}-${si}`, C_BIO, w, false, dim),
+                    )}
                     {seg({ x1: grp.anchorX, y1: grp.anchorY, x2: grp.anchorX, y2: grp.busY }, `st-${gi}`, C_BIO, w, false, dim)}
                     {grp.barX2 > grp.barX1 &&
                       seg({ x1: grp.barX1, y1: grp.busY, x2: grp.barX2, y2: grp.busY }, `bar-${gi}`, C_BIO, w, false, dim)}

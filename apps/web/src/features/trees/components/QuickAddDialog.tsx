@@ -166,6 +166,19 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
           toPersonId: relation.child.id,
           subtype: relSubtype || 'biological',
         });
+        // Lógica de pareja: si el hijo YA tenía otro(s) progenitor(es), unimos a
+        // los co-padres como pareja automáticamente (papá ↔ mamá del mismo hijo).
+        const tree = await api.getTree(treeId);
+        const coParents = tree.relationships
+          .filter(
+            (r) => r.type === 'parent' && r.toPersonId === relation.child.id && r.fromPersonId !== newPerson.id,
+          )
+          .map((r) => r.fromPersonId);
+        for (const pid of coParents) {
+          await api
+            .addRelationship({ type: 'partner', fromPersonId: newPerson.id, toPersonId: pid, subtype: 'marriage' })
+            .catch(() => undefined); // ignora si ya existe esa unión
+        }
       } else if (relation.kind === 'child') {
         await api.addRelationship({
           type: 'parent',
@@ -173,6 +186,26 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
           toPersonId: newPerson.id,
           subtype: relSubtype || 'biological',
         });
+        // Si el progenitor tiene pareja, el hijo también desciende de esa pareja.
+        const tree = await api.getTree(treeId);
+        const partners = tree.relationships
+          .filter(
+            (r) =>
+              r.type === 'partner' &&
+              (r.fromPersonId === relation.parent.id || r.toPersonId === relation.parent.id),
+          )
+          .map((r) => (r.fromPersonId === relation.parent.id ? r.toPersonId : r.fromPersonId));
+        // Solo auto-vinculamos si hay EXACTAMENTE una pareja (caso inequívoco).
+        if (partners.length === 1) {
+          await api
+            .addRelationship({
+              type: 'parent',
+              fromPersonId: partners[0]!,
+              toPersonId: newPerson.id,
+              subtype: 'biological',
+            })
+            .catch(() => undefined);
+        }
       } else if (relation.kind === 'partner') {
         await api.addRelationship({
           type: 'partner',
@@ -305,6 +338,11 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
             </Field>
           )}
 
+          {/* Lugar de nacimiento — visible siempre para que sea fácil de encontrar */}
+          <Field label="📍 Lugar de nacimiento" hint="opcional · aparece en el Globo 3D">
+            <PlaceSearch value={place?.display ?? null} onSelect={setPlace} onClear={() => setPlace(null)} />
+          </Field>
+
           {m.hint && (
             <p className="font-display text-sm italic text-ink-500">{m.hint}</p>
           )}
@@ -352,14 +390,6 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
                 value={birthDate}
                 onChange={setBirthDate}
               />
-
-              <Field label="Lugar de origen" hint="aparece en el globo 3D">
-                <PlaceSearch
-                  value={place?.display ?? null}
-                  onSelect={setPlace}
-                  onClear={() => setPlace(null)}
-                />
-              </Field>
 
               <div className="rounded-sm border border-paper-300 bg-paper-100 px-4 py-3">
                 <label className="flex items-center gap-3 font-sans text-sm">

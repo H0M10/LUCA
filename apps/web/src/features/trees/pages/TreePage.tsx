@@ -155,30 +155,35 @@ export function TreePage() {
 
             {/* Toggle vista — Árbol completo navegable (default) / Lista */}
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-              <div className="inline-flex rounded-full border border-paper-300 bg-paper-50 p-1 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-full border border-paper-300 bg-paper-50 p-1 text-xs">
+                  <button
+                    onClick={() => setView('tree')}
+                    className={`rounded-full px-4 py-1.5 font-sans transition ${
+                      view === 'tree' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+                    }`}
+                  >
+                    Árbol
+                  </button>
+                  <button
+                    onClick={() => setView('list')}
+                    className={`rounded-full px-4 py-1.5 font-sans transition ${
+                      view === 'list' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+                    }`}
+                  >
+                    Lista
+                  </button>
+                </div>
+                {/* Globo 3D — botón propio y destacado */}
                 <button
-                  onClick={() => setView('tree')}
-                  className={`rounded-full px-4 py-1.5 font-sans transition ${
-                    view === 'tree' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+                  onClick={() => setView(view === 'globe' ? 'tree' : 'globe')}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-sans text-xs font-semibold shadow-paper transition ${
+                    view === 'globe'
+                      ? 'bg-moss-700 text-white'
+                      : 'border border-moss-700/40 bg-white text-moss-700 hover:bg-moss-50'
                   }`}
                 >
-                  Árbol
-                </button>
-                <button
-                  onClick={() => setView('list')}
-                  className={`rounded-full px-4 py-1.5 font-sans transition ${
-                    view === 'list' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
-                  }`}
-                >
-                  Lista
-                </button>
-                <button
-                  onClick={() => setView('globe')}
-                  className={`rounded-full px-4 py-1.5 font-sans transition ${
-                    view === 'globe' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
-                  }`}
-                >
-                  Globo 3D
+                  🌍 Globo 3D
                 </button>
               </div>
               <p className="font-sans text-xs italic text-ink-500">

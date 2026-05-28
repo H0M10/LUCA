@@ -25,6 +25,14 @@ export function PrintableGenogram({
     const lines = [
       <line key={`st-${gi}`} x1={grp.anchorX} y1={grp.anchorY} x2={grp.anchorX} y2={grp.busY} stroke="#333" strokeWidth="1.2" />,
     ];
+    if (grp.parentBar) {
+      lines.push(
+        <line key={`pb-${gi}`} x1={grp.parentBar.x1} y1={grp.parentBar.y} x2={grp.parentBar.x2} y2={grp.parentBar.y} stroke="#333" strokeWidth="1.2" />,
+      );
+    }
+    grp.parentStubs.forEach((s, si) =>
+      lines.push(<line key={`ps-${gi}-${si}`} x1={s.x} y1={s.fromY} x2={s.x} y2={s.toY} stroke="#333" strokeWidth="1.2" />),
+    );
     if (grp.barX2 > grp.barX1) {
       lines.push(
         <line key={`bar-${gi}`} x1={grp.barX1} y1={grp.busY} x2={grp.barX2} y2={grp.busY} stroke="#333" strokeWidth="1.2" />,

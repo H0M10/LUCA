@@ -139,7 +139,7 @@ export function EditPersonDialog({
 
           <DateField label="Fecha de nacimiento" hint="día y mes opcionales" value={birthDate} onChange={setBirthDate} />
 
-          <Field label="Lugar de origen" hint="aparece en el globo 3D">
+          <Field label="📍 Lugar de nacimiento" hint="opcional · aparece en el Globo 3D">
             <PlaceSearch
               value={place?.display ?? null}
               onSelect={(p) => {

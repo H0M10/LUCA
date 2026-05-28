@@ -172,6 +172,9 @@ export interface ChildGroup {
   barX2: number;
   drops: Array<{ x: number; topY: number; childId: string; subtype: string | null; dashed: boolean }>;
   touches: Set<string>;
+  /** Barra + bajadas que conectan a los padres cuando NO son una pareja registrada. */
+  parentBar: { x1: number; x2: number; y: number } | null;
+  parentStubs: Array<{ x: number; fromY: number; toY: number }>;
 }
 
 const STEP_LIKE = new Set(['adoptive', 'step', 'foster', 'surrogate']);
@@ -229,16 +232,23 @@ export function buildGenogramEdges(rels: RelationshipDto[], layout: Layout) {
   for (const { parents, children } of groups.values()) {
     let anchorX: number;
     let anchorY: number;
+    let parentBar: { x1: number; x2: number; y: number } | null = null;
+    let parentStubs: Array<{ x: number; fromY: number; toY: number }> = [];
     if (parents.length >= 2) {
       const up = coupleUnion.get(parents.join('|'));
       if (up) {
         anchorX = up.x;
         anchorY = up.y;
       } else {
+        // Co-padres que NO son pareja registrada: los unimos con una barra
+        // para que el descenso al hijo no quede "suelto".
         const cs = parents.map(center).filter(Boolean) as NonNullable<ReturnType<typeof center>>[];
         if (!cs.length) continue;
-        anchorX = cs.reduce((s, c) => s + c.cx, 0) / cs.length;
         anchorY = Math.max(...cs.map((c) => c.bottom)) + GAP_Y * 0.32;
+        const pxs = cs.map((c) => c.cx);
+        anchorX = (Math.min(...pxs) + Math.max(...pxs)) / 2;
+        parentBar = { x1: Math.min(...pxs), x2: Math.max(...pxs), y: anchorY };
+        parentStubs = cs.map((c) => ({ x: c.cx, fromY: c.bottom, toY: anchorY }));
       }
     } else {
       const c = center(parents[0]!);
@@ -268,6 +278,8 @@ export function buildGenogramEdges(rels: RelationshipDto[], layout: Layout) {
       barX2: Math.max(anchorX, ...xs),
       drops,
       touches: new Set<string>([...parents, ...children]),
+      parentBar,
+      parentStubs,
     });
   }
 
