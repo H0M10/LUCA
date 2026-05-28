@@ -53,9 +53,13 @@ export function TreePage() {
     mutationFn: () => api.deleteTree(id!),
     onSuccess: () => {
       toast.success('Árbol eliminado');
+      // Salimos primero y luego quitamos la query del árbol borrado para que
+      // NO se vuelva a pedir (daría 404 y el "error al recargar").
+      navigate('/dashboard', { replace: true });
+      qc.removeQueries({ queryKey: ['tree', id] });
       qc.invalidateQueries({ queryKey: ['trees'] });
-      navigate('/dashboard');
     },
+    onError: (e) => toast.error((e as { message?: string }).message ?? 'No se pudo eliminar el árbol'),
   });
 
   if (isLoading || !tree) {

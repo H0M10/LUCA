@@ -28,6 +28,7 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
   const [addRelation, setAddRelation] = useState<Relation | null>(null);
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<Tab>('family');
+  const [showDelete, setShowDelete] = useState(false);
 
   const parents = relationships
     .filter((r) => r.type === 'parent' && r.toPersonId === person.id)
@@ -54,10 +55,32 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
   const father = parents.find((p) => p.gender === 'male');
   const mother = parents.find((p) => p.gender === 'female');
 
+  // Descendientes (hacia abajo por relaciones padre→hijo) — para poder podar una rama.
+  const descendants = (() => {
+    const set = new Set<string>();
+    const q = [person.id];
+    while (q.length) {
+      const cur = q.shift()!;
+      relationships
+        .filter((r) => r.type === 'parent' && r.fromPersonId === cur)
+        .forEach((r) => {
+          if (!set.has(r.toPersonId)) {
+            set.add(r.toPersonId);
+            q.push(r.toPersonId);
+          }
+        });
+    }
+    set.delete(person.id);
+    return set;
+  })();
+
   const del = useMutation({
-    mutationFn: () => api.deletePerson(person.id),
-    onSuccess: () => {
-      toast.success(`${person.firstName} eliminado`);
+    mutationFn: async (ids: string[]) => {
+      // Borramos descendientes primero, luego la persona (evita relaciones colgando raras).
+      for (const pid of ids) await api.deletePerson(pid);
+    },
+    onSuccess: (_d, ids) => {
+      toast.success(ids.length > 1 ? `${ids.length} personas eliminadas` : `${person.firstName} eliminado`);
       qc.invalidateQueries({ queryKey: ['tree', treeId] });
       onClose();
     },
@@ -173,6 +196,46 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
           )}
         </div>
 
+        {/* Menú de borrado: solo esta persona, o esta + sus descendientes */}
+        {showDelete && (
+          <div className="border-t border-clay-300 bg-clay-100/60 px-6 py-4">
+            <p className="mb-3 font-sans text-sm text-ink-700">
+              ¿Cómo quieres eliminar a <strong>{person.firstName}</strong>?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => del.mutate([person.id])}
+                disabled={del.isPending}
+                className="rounded-full border border-clay-500 bg-white px-4 py-2 text-left font-sans text-sm text-ink-900 transition hover:bg-clay-100 disabled:opacity-50"
+              >
+                <strong>Solo a {person.firstName}</strong>
+                <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500">
+                  Sus familiares quedan, solo se quitan sus vínculos
+                </span>
+              </button>
+              {descendants.size > 0 && (
+                <button
+                  onClick={() => del.mutate([...descendants, person.id])}
+                  disabled={del.isPending}
+                  className="rounded-full border border-clay-500 bg-white px-4 py-2 text-left font-sans text-sm text-clay-700 transition hover:bg-clay-100 disabled:opacity-50"
+                >
+                  <strong>A {person.firstName} y sus {descendants.size} descendiente{descendants.size === 1 ? '' : 's'}</strong>
+                  <span className="block font-mono text-[10px] uppercase tracking-widest text-clay-600">
+                    Poda toda la rama hacia abajo
+                  </span>
+                </button>
+              )}
+              <button
+                onClick={() => setShowDelete(false)}
+                disabled={del.isPending}
+                className="self-start font-mono text-[10px] uppercase tracking-widest text-ink-500 hover:text-ink-900"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between border-t border-paper-300 bg-paper-100 px-6 py-3">
           <Link
             to={`/persons/${person.id}?treeId=${treeId}`}
@@ -181,11 +244,7 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
             Expediente completo →
           </Link>
           <button
-            onClick={() => {
-              if (confirm(`¿Eliminar a ${person.firstName}? Las relaciones también se borrarán.`)) {
-                del.mutate();
-              }
-            }}
+            onClick={() => setShowDelete((v) => !v)}
             className="font-mono text-[10px] uppercase tracking-widest text-clay-600 hover:text-clay-700"
           >
             Eliminar
