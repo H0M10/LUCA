@@ -11,6 +11,7 @@ import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { treesRouter } from './modules/trees/trees.routes.js';
 import { personsRouter } from './modules/persons/persons.routes.js';
+import { photosRouter } from './modules/persons/photo.routes.js';
 import { relationshipsRouter } from './modules/relationships/relationships.routes.js';
 import { catalogRouter } from './modules/catalog/catalog.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
@@ -39,6 +40,7 @@ export function createApp(): Express {
   // Los routers que usan rutas con prefijo /api (persons, medical) van al final
   // porque su `router.use(authenticate)` interceptaría las anteriores.
   app.use('/api', personsRouter); // /api/:treeId/persons y /api/persons/:id
+  app.use('/api', photosRouter); // /api/persons/:id/photo
   app.use('/api', medicalRouter); // /api/persons/:id/{conditions,allergies,habits}
 
   app.use(notFoundHandler);

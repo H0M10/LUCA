@@ -15,6 +15,7 @@ import { PersonPanel } from '../components/PersonPanel.js';
 import { ShareTreeDialog } from '../components/ShareTreeDialog.js';
 import { SearchPalette } from '../components/SearchPalette.js';
 import { MedicalSummaryDialog } from '../components/MedicalSummaryDialog.js';
+import { OnboardingTour } from '../../../shared/components/OnboardingTour.js';
 
 export function TreePage() {
   const { id } = useParams<{ id: string }>();
@@ -252,6 +253,8 @@ export function TreePage() {
       )}
 
       {showSummary && <MedicalSummaryDialog treeId={tree.id} onClose={() => setShowSummary(false)} />}
+
+      <OnboardingTour />
     </div>
   );
 }

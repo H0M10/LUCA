@@ -262,6 +262,7 @@ model person {
   blood_type                                       String?
   is_proband                                       Boolean             @default(false)
   photo_media_id                                   String?             @db.Uuid
+  photo_data                                       String?
   notes                                            String?
   sensitive_notes_encrypted                        Bytes?
   tags                                             String[]            @default([])

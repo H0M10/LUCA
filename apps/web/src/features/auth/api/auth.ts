@@ -7,18 +7,23 @@ export const register = (input: RegisterInput) =>
     body: JSON.stringify(input),
   }).then((r) => r.data);
 
-export const login = (input: LoginInput) =>
-  http<{ data: UserPublic }>('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  }).then((r) => r.data);
+export type LoginResult =
+  | { kind: 'ok'; user: UserPublic }
+  | { kind: '2fa'; challengeId: string };
+
+export const login = async (input: LoginInput): Promise<LoginResult> => {
+  const r = await http<{ data: UserPublic | { requires2FA: true; challengeId: string } }>(
+    '/api/auth/login',
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+  if ('requires2FA' in r.data && r.data.requires2FA) {
+    return { kind: '2fa', challengeId: r.data.challengeId };
+  }
+  return { kind: 'ok', user: r.data as UserPublic };
+};
 
 export const logout = () => http<void>('/api/auth/logout', { method: 'POST' });
 
-/**
- * Devuelve el usuario actual o null si no hay sesión (401).
- * No queremos que React Query trate "no logueado" como ERROR — es un estado válido.
- */
 export const me = async (): Promise<UserPublic | null> => {
   try {
     const r = await http<{ data: UserPublic }>('/api/auth/me');

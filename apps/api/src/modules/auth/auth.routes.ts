@@ -13,6 +13,11 @@ import {
 } from '../../lib/googleOAuth.js';
 import { findOrCreateGoogleUser, issueGoogleTokens } from './google.service.js';
 import { changePassword, verifyEmail } from './auth.password.service.js';
+import { confirm2FA, disable2FA, get2FAStatus, setup2FA, verify2FA } from './twofa.service.js';
+import { prisma } from '../../lib/prisma.js';
+import { hashToken } from '../../lib/hash.js';
+import { signAccessToken, signRefreshToken } from '../../lib/jwt.js';
+import { randomUUID } from 'node:crypto';
 import { setAuthCookies } from '../../lib/cookies.js';
 import { env } from '../../config/env.js';
 import { logger } from '../../config/logger.js';
@@ -145,3 +150,106 @@ authRouter.post('/verify-email', validateBody(VerifyEmailSchema), async (req, re
     next(e);
   }
 });
+
+// ───────── 2FA TOTP ─────────
+const TwoFaCodeSchema = z.object({ code: z.string().min(6).max(10) });
+const TwoFaChallengeSchema = z.object({
+  challengeId: z.string().min(10),
+  code: z.string().min(6).max(10),
+});
+
+authRouter.get('/2fa/status', authenticate, async (req, res, next) => {
+  try {
+    const s = await get2FAStatus(req.user!.id);
+    res.json({ data: s });
+  } catch (e) {
+    next(e);
+  }
+});
+
+authRouter.post('/2fa/setup', authenticate, async (req, res, next) => {
+  try {
+    const user = await prisma.app_user.findUnique({ where: { id: req.user!.id } });
+    if (!user) throw new Error('User missing');
+    const { qrDataUrl, secret } = await setup2FA(req.user!.id, user.email);
+    res.json({ data: { qrDataUrl, secret } });
+  } catch (e) {
+    next(e);
+  }
+});
+
+authRouter.post(
+  '/2fa/confirm',
+  authenticate,
+  validateBody(TwoFaCodeSchema),
+  async (req, res, next) => {
+    try {
+      const { backupCodes } = await confirm2FA(req.user!.id, req.body.code);
+      res.json({ data: { ok: true, backupCodes } });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+authRouter.post(
+  '/2fa/disable',
+  authenticate,
+  validateBody(TwoFaCodeSchema),
+  async (req, res, next) => {
+    try {
+      await disable2FA(req.user!.id, req.body.code);
+      res.json({ data: { ok: true } });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// Endpoint para completar login si el usuario tiene 2FA: recibe el challenge token
+// que devolvió /login (en lugar de cookies de sesión) + el código TOTP.
+// Si OK, emite cookies de sesión normales.
+authRouter.post(
+  '/2fa/challenge',
+  authLimiter,
+  validateBody(TwoFaChallengeSchema),
+  async (req, res, next) => {
+    try {
+      // Encontrar el challenge guardado en auth_token (purpose='2fa_challenge')
+      const challengeHash = hashToken(req.body.challengeId);
+      const row = await prisma.auth_token.findFirst({
+        where: { token_hash: challengeHash, purpose: 'magic_link', used_at: null },
+      });
+      if (!row || !row.user_id || row.expires_at < new Date()) {
+        return res.status(401).json({ error: { code: 'INVALID_CHALLENGE', message: 'Challenge inválido o expirado' } });
+      }
+      const ok = await verify2FA(row.user_id, req.body.code);
+      if (!ok) return res.status(401).json({ error: { code: 'BAD_CODE', message: 'Código incorrecto' } });
+
+      // Marcar challenge usado y emitir tokens
+      await prisma.auth_token.update({ where: { id: row.id }, data: { used_at: new Date() } });
+      const user = await prisma.app_user.findUnique({ where: { id: row.user_id } });
+      if (!user) throw new Error('User missing');
+
+      const fid = randomUUID();
+      const jti = randomUUID();
+      const access = signAccessToken({ sub: user.id, role: user.role as 'user' | 'admin' });
+      const refresh = signRefreshToken({ sub: user.id, fid, jti });
+      await prisma.refresh_token.create({
+        data: {
+          id: jti,
+          user_id: user.id,
+          family_id: fid,
+          token_hash: hashToken(refresh),
+          user_agent: req.headers['user-agent'] ?? null,
+          ip: req.ip ?? null,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+      setAuthCookies(res, access, refresh);
+      res.json({ data: { ok: true } });
+    } catch (e) {
+      next(e);
+    }
+  },
+);

@@ -3,8 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { LoginSchema, type LoginInput } from '@genograma/shared';
 import { useLogin } from '../hooks/useAuth.js';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { TwoFactorChallenge } from './TwoFactorChallenge.js';
 import { Button, ErrorAlert, Field, Input } from '../../../shared/components/ui.js';
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
@@ -26,6 +27,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { mutate, isPending, error } = useLogin();
+  const [challengeId, setChallengeId] = useState<string | null>(null);
 
   useEffect(() => {
     const err = searchParams.get('error');
@@ -37,6 +39,8 @@ export function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(LoginSchema),
   });
+
+  if (challengeId) return <TwoFactorChallenge challengeId={challengeId} />;
 
   return (
     <div>
@@ -68,9 +72,13 @@ export function LoginPage() {
               <form
                 onSubmit={handleSubmit((d) =>
                   mutate(d, {
-                    onSuccess: (user) => {
-                      toast.success(`Bienvenido, ${user.fullName.split(' ')[0]}`);
-                      navigate('/dashboard');
+                    onSuccess: (result) => {
+                      if (result.kind === '2fa') {
+                        setChallengeId(result.challengeId);
+                      } else {
+                        toast.success(`Bienvenido, ${result.user.fullName.split(' ')[0]}`);
+                        navigate('/dashboard');
+                      }
                     },
                   }),
                 )}

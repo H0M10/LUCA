@@ -23,7 +23,10 @@ export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: api.login,
-    onSuccess: (user) => qc.setQueryData(['me'], user),
+    onSuccess: (result) => {
+      if (result.kind === 'ok') qc.setQueryData(['me'], result.user);
+      // si kind === '2fa' el caller maneja navegación al challenge
+    },
   });
 }
 

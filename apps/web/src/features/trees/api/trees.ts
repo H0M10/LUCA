@@ -24,6 +24,7 @@ export interface PersonDto {
   bloodType: string | null;
   isProband: boolean;
   photoMediaId: string | null;
+  photoData: string | null;
   notes: string | null;
   tags: string[];
 }

@@ -113,6 +113,7 @@ export function personDto(p: {
   blood_type: string | null;
   is_proband: boolean;
   photo_media_id: string | null;
+  photo_data?: string | null;
   notes: string | null;
   tags: string[];
 }) {
@@ -129,6 +130,7 @@ export function personDto(p: {
     bloodType: p.blood_type,
     isProband: p.is_proband,
     photoMediaId: p.photo_media_id,
+    photoData: p.photo_data ?? null,
     notes: p.notes,
     tags: p.tags ?? [],
   };

@@ -38,23 +38,79 @@
 .dark .hover\:bg-moss-700:hover { background-color: #5A7355 !important; }
 
 /* ============================================
-   PRINT — para imprimir el genograma limpio
+   PRINT — solo muestra el genograma limpio.
+   Todo lo demás (nav, toolbar, botones add, footer, banners) se oculta.
    ============================================ */
 @media print {
+  @page { margin: 1.5cm; size: landscape; }
   body {
     background: white !important;
     color: black !important;
   }
-  body::before { display: none; }
-  header, footer, .no-print, nav, .editorial > header,
-  .editorial > div > div:first-child > div:last-child {
+  body::before { display: none !important; }
+
+  /* Oculta TODO lo que tenga la clase no-print o sea UI */
+  .no-print,
+  header.sticky,
+  footer,
+  nav,
+  button,
+  [role="dialog"],
+  .animate-toast-in,
+  /* Toggles y toolbars */
+  .editorial > header,
+  /* QuickChip bar y el toggle de vistas */
+  .editorial .inline-flex.rounded-full {
     display: none !important;
   }
-  .editorial { max-width: 100% !important; padding: 0 !important; }
-  .animate-grow-in, .animate-fade-up, .animate-fade-in, .animate-scale-in {
+
+  /* El contenedor principal full-width sin padding */
+  .editorial {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+
+  /* Cards y líneas: forzar render aún si tenían animations backwards */
+  .animate-grow-in,
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-slide-in,
+  .animate-draw-path,
+  .stagger > *,
+  .stagger {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  /* Bordes en negro suave */
+  .border-paper-300,
+  .border-paper-400,
+  .border-ink-900 {
+    border-color: #333 !important;
+  }
+
+  /* Forzar bg blanco en cualquier card */
+  .bg-paper-50,
+  .bg-paper-100 {
+    background: white !important;
+  }
+
+  /* Quitar shadows para impresión limpia */
+  .shadow-paper,
+  .shadow-paper-lg,
+  .shadow-moss {
+    box-shadow: none !important;
+  }
+
+  /* Título del árbol arriba al imprimir */
+  h1.font-display {
+    page-break-after: avoid;
   }
 }
 
