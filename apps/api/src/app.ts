@@ -16,6 +16,7 @@ import { relationshipsRouter } from './modules/relationships/relationships.route
 import { catalogRouter } from './modules/catalog/catalog.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
 import { medicalRouter } from './modules/medical/medical.routes.js';
+import { adminRouter } from './modules/admin/admin.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -33,6 +34,7 @@ export function createApp(): Express {
   app.use('/health', healthRouter);
   // Rutas específicas primero (más específicas → más generales)
   app.use('/api/auth', authRouter);
+  app.use('/api/admin', adminRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/trees', treesRouter);
   app.use('/api/relationships', relationshipsRouter);

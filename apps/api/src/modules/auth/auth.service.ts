@@ -4,7 +4,7 @@ import { hashPassword, hashToken, randomToken, verifyPassword } from '../../lib/
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../lib/jwt.js';
 import { Errors } from '../../lib/errors.js';
 import { sendMail } from '../../lib/mailer.js';
-import type { LoginInput, RegisterInput, UserPublic } from '@genograma/shared';
+import type { LoginInput, RegisterInput, UserPublic, UserRole } from '@genograma/shared';
 
 function toPublic(u: {
   id: string;
@@ -67,7 +67,7 @@ export async function registerUser(input: RegisterInput, meta: { ip?: string; ua
   const tmpl = verifyEmailTemplate(user.full_name, verifyLink);
   await sendMail({ to: user.email, toName: user.full_name, subject: tmpl.subject, html: tmpl.html });
 
-  const tokens = await issueTokens(user.id, user.role as 'user' | 'admin', meta);
+  const tokens = await issueTokens(user.id, user.role as UserRole, meta);
   return { user: toPublic(user), tokens };
 }
 
@@ -93,7 +93,7 @@ export async function loginUser(input: LoginInput, meta: { ip?: string; ua?: str
 
   await prisma.app_user.update({ where: { id: user.id }, data: { last_login_at: new Date() } });
 
-  const tokens = await issueTokens(user.id, user.role as 'user' | 'admin', meta);
+  const tokens = await issueTokens(user.id, user.role as UserRole, meta);
   return { user: toPublic(user), tokens };
 }
 
@@ -149,12 +149,12 @@ export async function rotateTokens(
   const user = await prisma.app_user.findUnique({ where: { id: p.sub } });
   if (!user || user.status !== 'active') throw Errors.unauthorized();
 
-  return issueTokens(user.id, user.role as 'user' | 'admin', meta, p.fid, stored.id);
+  return issueTokens(user.id, user.role as UserRole, meta, p.fid, stored.id);
 }
 
 async function issueTokens(
   userId: string,
-  role: 'user' | 'admin',
+  role: UserRole,
   meta: { ip?: string; ua?: string },
   familyId?: string,
   parentId?: string,

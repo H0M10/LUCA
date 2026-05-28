@@ -26,6 +26,7 @@ export function Navbar() {
           {me ? (
             <>
               <NavItem to="/dashboard">Mi árbol</NavItem>
+              {(me.role === 'admin' || me.role === 'worker') && <NavItem to="/admin">Panel</NavItem>}
               <NavItem to="/profile">Perfil</NavItem>
             </>
           ) : (
@@ -40,7 +41,7 @@ export function Navbar() {
 
         <div className="hidden items-center gap-3 md:flex">
           {me ? (
-            <AvatarMenu name={me.fullName} email={me.email} />
+            <AvatarMenu name={me.fullName} email={me.email} role={me.role} />
           ) : (
             <>
               <Link to="/login" className="font-sans text-sm font-medium text-paper-100/80 transition hover:text-white">
@@ -78,6 +79,9 @@ export function Navbar() {
             {me ? (
               <>
                 <MobileLink to="/dashboard" onClick={() => setOpen(false)}>Mi árbol</MobileLink>
+                {(me.role === 'admin' || me.role === 'worker') && (
+                  <MobileLink to="/admin" onClick={() => setOpen(false)}>Panel</MobileLink>
+                )}
                 <MobileLink to="/profile" onClick={() => setOpen(false)}>Perfil</MobileLink>
               </>
             ) : (
@@ -135,7 +139,7 @@ function MobileLink({ to, onClick, children }: { to: string; onClick: () => void
   );
 }
 
-function AvatarMenu({ name, email }: { name: string; email: string }) {
+function AvatarMenu({ name, email, role }: { name: string; email: string; role: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -172,6 +176,15 @@ function AvatarMenu({ name, email }: { name: string; email: string }) {
           >
             Mi árbol
           </Link>
+          {(role === 'admin' || role === 'worker') && (
+            <Link
+              to="/admin"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 font-sans text-sm text-ink-700 transition hover:bg-paper-100 hover:text-ink-900"
+            >
+              Panel de control
+            </Link>
+          )}
           <Link
             to="/profile"
             onClick={() => setOpen(false)}

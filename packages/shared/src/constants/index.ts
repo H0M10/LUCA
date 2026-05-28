@@ -1,7 +1,7 @@
 export const GENDERS = ['male', 'female', 'nonbinary', 'unknown'] as const;
 export type Gender = (typeof GENDERS)[number];
 
-export const USER_ROLES = ['user', 'admin'] as const;
+export const USER_ROLES = ['user', 'worker', 'admin'] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 export const USER_STATUSES = ['active', 'suspended', 'deleted'] as const;

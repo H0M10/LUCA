@@ -2,7 +2,7 @@ import { Router, type Router as RouterType } from 'express';
 import { authLimiter } from '../../middlewares/rateLimit.js';
 import { validateBody } from '../../middlewares/validate.js';
 import { authenticate } from '../../middlewares/authenticate.js';
-import { LoginSchema, RegisterSchema } from '@genograma/shared';
+import { LoginSchema, RegisterSchema, type UserRole } from '@genograma/shared';
 import * as ctrl from './auth.controller.js';
 import {
   buildAuthUrl,
@@ -102,7 +102,7 @@ authRouter.get('/google/callback', async (req, res) => {
     const user = await findOrCreateGoogleUser(payload);
     const tokens = await issueGoogleTokens(
       user.id,
-      user.role as 'user' | 'admin',
+      user.role as UserRole,
       { ip: req.ip, ua: req.headers['user-agent'] },
     );
     setAuthCookies(res, tokens.access, tokens.refresh);
@@ -233,7 +233,7 @@ authRouter.post(
 
       const fid = randomUUID();
       const jti = randomUUID();
-      const access = signAccessToken({ sub: user.id, role: user.role as 'user' | 'admin' });
+      const access = signAccessToken({ sub: user.id, role: user.role as UserRole });
       const refresh = signRefreshToken({ sub: user.id, fid, jti });
       await prisma.refresh_token.create({
         data: {

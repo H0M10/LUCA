@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma.js';
 import { hashToken } from '../../lib/hash.js';
 import { signAccessToken, signRefreshToken } from '../../lib/jwt.js';
 import { Errors } from '../../lib/errors.js';
+import type { UserRole } from '@genograma/shared';
 import type { TokenPayload } from 'google-auth-library';
 
 /**
@@ -83,7 +84,7 @@ export async function findOrCreateGoogleUser(payload: TokenPayload) {
 
 export async function issueGoogleTokens(
   userId: string,
-  role: 'user' | 'admin',
+  role: UserRole,
   meta: { ip?: string; ua?: string },
 ): Promise<{ access: string; refresh: string }> {
   const fid = randomUUID();

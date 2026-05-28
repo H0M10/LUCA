@@ -1,9 +1,10 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
+import type { UserRole } from '@genograma/shared';
 import { env } from '../config/env.js';
 
 export interface AccessTokenPayload {
   sub: string;
-  role: 'user' | 'admin';
+  role: UserRole;
 }
 
 export function signAccessToken(payload: AccessTokenPayload): string {

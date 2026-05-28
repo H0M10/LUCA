@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { Providers } from './providers.js';
 import { RequireAuth } from './RequireAuth.js';
+import { RequireAdmin } from './RequireAdmin.js';
 import { RedirectIfAuth } from './RedirectIfAuth.js';
 import { LandingPage } from '../features/landing/pages/LandingPage.js';
 import { NotFoundPage } from '../features/landing/pages/NotFoundPage.js';
@@ -11,6 +12,7 @@ import { TreePage } from '../features/trees/pages/TreePage.js';
 import { PersonPage } from '../features/trees/pages/PersonPage.js';
 import { ProfilePage } from '../features/profile/pages/ProfilePage.js';
 import { VerifyEmailPage } from '../features/auth/pages/VerifyEmailPage.js';
+import { AdminDashboard } from '../features/admin/pages/AdminDashboard.js';
 
 export function App() {
   return (
@@ -50,6 +52,14 @@ export function App() {
             <RequireAuth>
               <ProfilePage />
             </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <RequireAdmin>
+              <AdminDashboard />
+            </RequireAdmin>
           }
         />
         <Route path="*" element={<NotFoundPage />} />
