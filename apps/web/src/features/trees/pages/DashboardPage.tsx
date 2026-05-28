@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/trees.js';
 import { Navbar } from '../../../shared/components/Navbar.js';
 import { Footer } from '../../../shared/components/Footer.js';
@@ -8,6 +8,7 @@ import { Button } from '../../../shared/components/ui.js';
 import { useMe } from '../../auth/hooks/useAuth.js';
 import { Branch } from '../../../shared/brand/Logo.js';
 import { TreeListSkeleton } from '../../../shared/components/Skeleton.js';
+import { toast } from '../../../shared/stores/toast.js';
 
 /**
  * Dashboard simplificado: un usuario = un árbol personal (creado al registrarse).
@@ -115,7 +116,22 @@ export function DashboardPage() {
 
 function NoTreeFallback() {
   const navigate = useNavigate();
-  // Si por algún motivo el usuario quedó sin árbol, le creamos uno
+  const qc = useQueryClient();
+  const me = useMe().data;
+
+  // Crea de verdad el árbol personal y entra a él (antes navegaba a una ruta inexistente).
+  const create = useMutation({
+    mutationFn: () =>
+      api.createTree({
+        name: me?.fullName ? `Familia ${me.fullName.split(' ')[0]}` : 'Mi familia',
+      }),
+    onSuccess: (tree) => {
+      qc.invalidateQueries({ queryKey: ['trees'] });
+      navigate(`/trees/${tree.id}`, { replace: true });
+    },
+    onError: () => toast.error('No se pudo crear el árbol'),
+  });
+
   return (
     <div className="animate-scale-in border border-dashed border-paper-400 bg-paper-50/60 px-6 py-20 text-center">
       <Branch className="mx-auto h-8 w-48 text-moss-700" />
@@ -128,7 +144,9 @@ function NoTreeFallback() {
         Cada cuenta tiene un árbol personal. Vamos a crear el tuyo.
       </p>
       <div className="mt-10">
-        <Button onClick={() => navigate('/dashboard/new')}>Crear mi árbol →</Button>
+        <Button onClick={() => create.mutate()} disabled={create.isPending}>
+          {create.isPending ? 'Creando…' : 'Crear mi árbol →'}
+        </Button>
       </div>
     </div>
   );
