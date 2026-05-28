@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PersonDto, RelationshipDto } from '../api/trees.js';
+import type { Relation } from './QuickAddDialog.js';
 import { PersonAvatar } from './PersonAvatar.js';
 
 interface Props {
@@ -7,9 +8,9 @@ interface Props {
   relationships: RelationshipDto[];
   linkMode: null | { from: string; type: 'parent' | 'partner' };
   onSelectAsTarget: (id: string) => void;
-  onStartLink: (id: string, type: 'parent' | 'partner') => void;
   onDelete: (id: string) => void;
   onSelect: (id: string) => void;
+  onAdd: (relation: Relation) => void;
 }
 
 export interface Layout {
@@ -102,31 +103,93 @@ export function GenogramView({
   relationships,
   linkMode,
   onSelectAsTarget,
-  onStartLink,
   onDelete,
   onSelect,
+  onAdd,
 }: Props) {
   const layout = useMemo(() => computeLayout(persons, relationships), [persons, relationships]);
   // Persona resaltada: al pasar el cursor, ilumina TODAS sus conexiones.
   const [hovered, setHovered] = useState<string | null>(null);
-  // Zoom para navegar árboles grandes (el contenedor hace scroll = paneo).
-  const [zoom, setZoom] = useState(1);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  if (persons.length === 0) return null;
-
-  const zoomIn = () => setZoom((z) => Math.min(2, +(z * 1.2).toFixed(2)));
-  const zoomOut = () => setZoom((z) => Math.max(0.3, +(z / 1.2).toFixed(2)));
-  const fit = () => {
-    const el = scrollRef.current;
-    if (!el) return setZoom(1);
-    const cw = el.clientWidth - 32;
-    const ch = el.clientHeight - 32;
-    setZoom(Math.max(0.3, Math.min(1, Math.min(cw / svgWidth, ch / svgHeight))));
-    el.scrollTo({ top: 0, left: 0 });
-  };
 
   const svgWidth = PAD * 2 + layout.maxPerGen * NODE_W + (layout.maxPerGen - 1) * GAP_X;
   const svgHeight = PAD * 2 + (layout.maxGen + 1) * NODE_H + layout.maxGen * GAP_Y;
+
+  // ── Lienzo navegable estilo Figma: arrastrar para mover, rueda para zoom ──
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [tx, setTx] = useState(24);
+  const [ty, setTy] = useState(24);
+  const pan = useRef({ active: false, sx: 0, sy: 0, ox: 0, oy: 0 });
+  const [grabbing, setGrabbing] = useState(false);
+
+  const clampZoom = (z: number) => Math.max(0.25, Math.min(2.5, z));
+
+  const fitToView = () => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const pad = 48;
+    const z = clampZoom(Math.min((el.clientWidth - pad) / svgWidth, (el.clientHeight - pad) / svgHeight));
+    setZoom(z);
+    setTx((el.clientWidth - svgWidth * z) / 2);
+    setTy(Math.max(16, (el.clientHeight - svgHeight * z) / 2));
+  };
+
+  // Ajustar a la vista al cargar y cuando cambia el tamaño del árbol
+  useEffect(() => {
+    const id = requestAnimationFrame(fitToView);
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [svgWidth, svgHeight]);
+
+  // Zoom con la rueda hacia el cursor (listener nativo no-pasivo)
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return undefined;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      setZoom((z) => {
+        const nz = clampZoom(z * (e.deltaY < 0 ? 1.12 : 1 / 1.12));
+        setTx((t) => mx - ((mx - t) / z) * nz);
+        setTy((t) => my - ((my - t) / z) * nz);
+        return nz;
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const zoomBy = (factor: number) => {
+    const el = viewportRef.current;
+    const cx = el ? el.clientWidth / 2 : 0;
+    const cy = el ? el.clientHeight / 2 : 0;
+    setZoom((z) => {
+      const nz = clampZoom(z * factor);
+      setTx((t) => cx - ((cx - t) / z) * nz);
+      setTy((t) => cy - ((cy - t) / z) * nz);
+      return nz;
+    });
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('[data-no-pan]')) return; // clicks en tarjetas
+    pan.current = { active: true, sx: e.clientX, sy: e.clientY, ox: tx, oy: ty };
+    setGrabbing(true);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!pan.current.active) return;
+    setTx(pan.current.ox + (e.clientX - pan.current.sx));
+    setTy(pan.current.oy + (e.clientY - pan.current.sy));
+  };
+  const endPan = () => {
+    pan.current.active = false;
+    setGrabbing(false);
+  };
+
+  if (persons.length === 0) return null;
 
   // Conjunto de personas conectadas directamente a la resaltada (para atenuar el resto)
   const connected = new Set<string>();
@@ -212,31 +275,35 @@ export function GenogramView({
 
   return (
     <div className="relative rounded-2xl border border-paper-300 bg-paper-50 shadow-paper">
-      {/* Controles de zoom — flotan sobre el árbol */}
-      <div className="absolute right-3 top-3 z-30 flex flex-col overflow-hidden rounded-full border border-paper-300 bg-white shadow-paper">
-        <button onClick={zoomIn} className="px-3 py-1.5 font-sans text-base font-semibold text-ink-700 transition hover:bg-moss-50 hover:text-moss-700" title="Acercar">＋</button>
+      {/* Controles — flotan sobre el árbol */}
+      <div className="absolute right-3 top-3 z-30 flex flex-col overflow-hidden rounded-2xl border border-paper-300 bg-white shadow-paper">
+        <button onClick={() => zoomBy(1.2)} className="px-3 py-2 font-sans text-base font-semibold text-ink-700 transition hover:bg-moss-50 hover:text-moss-700" title="Acercar">＋</button>
         <span className="h-px bg-paper-300" />
-        <button onClick={zoomOut} className="px-3 py-1.5 font-sans text-base font-semibold text-ink-700 transition hover:bg-moss-50 hover:text-moss-700" title="Alejar">－</button>
+        <button onClick={() => zoomBy(1 / 1.2)} className="px-3 py-2 font-sans text-base font-semibold text-ink-700 transition hover:bg-moss-50 hover:text-moss-700" title="Alejar">－</button>
         <span className="h-px bg-paper-300" />
-        <button onClick={fit} className="px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-ink-700 transition hover:bg-moss-50 hover:text-moss-700" title="Ajustar todo a la vista">Ver todo</button>
+        <button onClick={fitToView} className="px-3 py-2 font-mono text-[9px] uppercase tracking-widest text-ink-700 transition hover:bg-moss-50 hover:text-moss-700" title="Ajustar todo a la vista">Ver todo</button>
+      </div>
+      <div className="pointer-events-none absolute left-3 top-3 z-30 rounded-full bg-ink-900/80 px-3 py-1 font-mono text-[9px] uppercase tracking-widest text-white">
+        {Math.round(zoom * 100)}%
       </div>
 
-      {/* Contenedor con scroll = paneo (arrastra/usa scroll para navegar todo el árbol) */}
-      <div ref={scrollRef} className="max-h-[78vh] overflow-auto rounded-t-2xl">
-      {/* Decorative paper background dots */}
+      {/* Lienzo: arrastra para mover · rueda para zoom */}
+      <div
+        ref={viewportRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endPan}
+        onPointerLeave={() => { endPan(); setHovered(null); }}
+        className={`relative h-[78vh] touch-none overflow-hidden rounded-t-2xl ${grabbing ? 'cursor-grabbing' : 'cursor-grab'}`}
+        style={{ backgroundColor: '#F6F8F9', backgroundImage: 'radial-gradient(#D9DDE3 0.7px, transparent 0.7px)', backgroundSize: '22px 22px' }}
+      >
+        <div style={{ transform: `translate(${tx}px, ${ty}px) scale(${zoom})`, transformOrigin: '0 0', width: svgWidth, height: svgHeight }}>
       <svg
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-        width={svgWidth * zoom}
-        height={svgHeight * zoom}
+        width={svgWidth}
+        height={svgHeight}
         className="block"
-        onMouseLeave={() => setHovered(null)}
       >
-        <defs>
-          <pattern id="paper-grid" width="24" height="24" patternUnits="userSpaceOnUse">
-            <circle cx="12" cy="12" r="0.5" fill="#D9DDE3" />
-          </pattern>
-        </defs>
-        <rect width={svgWidth} height={svgHeight} fill="url(#paper-grid)" />
 
         {/* Conexiones (debajo de las cards), aparecen con un fundido suave */}
         <g className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
@@ -265,15 +332,16 @@ export function GenogramView({
                   dimmed={!!hovered && !connected.has(p.id)}
                   onHover={() => setHovered(p.id)}
                   onSelectAsTarget={() => onSelectAsTarget(p.id)}
-                  onStartLink={(t) => onStartLink(p.id, t)}
                   onDelete={() => onDelete(p.id)}
                   onSelect={() => onSelect(p.id)}
+                  onAdd={onAdd}
                 />
               </foreignObject>
             </g>
           );
         })}
       </svg>
+        </div>
       </div>
 
       {/* Legend abajo */}
@@ -292,7 +360,7 @@ export function GenogramView({
             Separados
           </span>
           <span className="ml-auto normal-case tracking-normal text-ink-400">
-            Pasa el cursor sobre una persona para resaltar sus conexiones · click para ver/editar
+            Arrastra para mover · rueda para zoom · cursor sobre una persona = resalta conexiones
           </span>
         </div>
       </div>
@@ -307,9 +375,9 @@ function PersonNode({
   dimmed,
   onHover,
   onSelectAsTarget,
-  onStartLink,
   onDelete,
   onSelect,
+  onAdd,
 }: {
   person: PersonDto;
   isTarget: boolean | null;
@@ -317,16 +385,27 @@ function PersonNode({
   dimmed: boolean;
   onHover: () => void;
   onSelectAsTarget: () => void;
-  onStartLink: (type: 'parent' | 'partner') => void;
   onDelete: () => void;
   onSelect: () => void;
+  onAdd: (relation: Relation) => void;
 }) {
   const dead = !!person.deathDate;
+  const [menu, setMenu] = useState(false);
+
+  const addOptions: Array<{ label: string; rel: Relation }> = [
+    { label: '↑ Padre', rel: { kind: 'father', child: person } },
+    { label: '↑ Madre', rel: { kind: 'mother', child: person } },
+    { label: '↔ Pareja', rel: { kind: 'partner', of: person } },
+    { label: '↓ Hijo/a', rel: { kind: 'child', parent: person } },
+    { label: '↔ Hermano/a', rel: { kind: 'sibling', of: person } },
+  ];
+
   return (
     <div
+      data-no-pan
       onMouseEnter={onHover}
       style={{ opacity: dimmed ? 0.3 : 1, transition: 'opacity .25s, transform .3s, box-shadow .3s' }}
-      className={`group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-paper transition-all duration-300 ease-out ${
+      className={`group relative flex h-full w-full flex-col rounded-2xl border bg-white shadow-paper transition-all duration-300 ease-out ${
         isTarget
           ? 'border-moss-700 shadow-moss'
           : isSource
@@ -338,7 +417,7 @@ function PersonNode({
     >
       {/* Acento superior de color (turquesa proband, petróleo resto) */}
       <span
-        className={`block h-1 w-full ${person.isProband ? 'bg-moss-700' : dead ? 'bg-paper-400' : 'bg-ink-900'}`}
+        className={`block h-1 w-full rounded-t-2xl ${person.isProband ? 'bg-moss-700' : dead ? 'bg-paper-400' : 'bg-ink-900'}`}
       />
 
       {isTarget && (
@@ -349,11 +428,8 @@ function PersonNode({
         />
       )}
 
-      {/* Body — abre el panel de la persona (ver/editar/agregar) */}
-      <button
-        onClick={onSelect}
-        className="flex flex-1 items-center gap-3 px-3 py-3 text-left"
-      >
+      {/* Body — abre el panel de la persona (ver/editar/eliminar/salud) */}
+      <button onClick={onSelect} className="flex flex-1 cursor-pointer items-center gap-3 px-3 py-3 text-left">
         <PersonAvatar person={person} size={44} />
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-display text-[15px] font-medium leading-tight text-ink-900 group-hover:text-moss-700">
@@ -381,19 +457,38 @@ function PersonNode({
       </button>
 
       {/* Acciones — visibles al hover */}
-      <div className="relative z-20 flex border-t border-paper-200 text-[10px] opacity-0 transition group-hover:opacity-100">
-        <button onClick={() => onStartLink('parent')} className="flex-1 px-2 py-1.5 font-sans font-medium text-moss-700 transition hover:bg-moss-50" title="Agregar hijo/a">
-          + hijo
+      <div className="relative z-20 flex rounded-b-2xl border-t border-paper-200 text-[10px] opacity-0 transition group-hover:opacity-100">
+        <button
+          onClick={(e) => { e.stopPropagation(); setMenu((m) => !m); }}
+          className="flex-1 rounded-bl-2xl px-2 py-1.5 font-sans font-semibold text-moss-700 transition hover:bg-moss-50"
+          title="Agregar familiar"
+        >
+          + Agregar familiar
         </button>
         <span className="w-px bg-paper-200" />
-        <button onClick={() => onStartLink('partner')} className="flex-1 px-2 py-1.5 font-sans font-medium text-moss-700 transition hover:bg-moss-50" title="Agregar pareja">
-          + pareja
-        </button>
-        <span className="w-px bg-paper-200" />
-        <button onClick={onDelete} className="flex-1 px-2 py-1.5 font-sans font-medium text-clay-600 transition hover:bg-clay-100" title="Eliminar persona">
-          ×
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="rounded-br-2xl px-3 py-1.5 font-sans font-medium text-clay-600 transition hover:bg-clay-100"
+          title="Eliminar / editar en el panel"
+        >
+          ⋯
         </button>
       </div>
+
+      {/* Menú de agregar familiar */}
+      {menu && (
+        <div className="absolute left-1/2 top-full z-40 mt-1 w-44 -translate-x-1/2 overflow-hidden rounded-xl border border-paper-300 bg-white shadow-paper-lg animate-scale-in">
+          {addOptions.map((o) => (
+            <button
+              key={o.label}
+              onClick={(e) => { e.stopPropagation(); setMenu(false); onAdd(o.rel); }}
+              className="block w-full px-4 py-2 text-left font-sans text-xs text-ink-700 transition hover:bg-moss-50 hover:text-moss-700"
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

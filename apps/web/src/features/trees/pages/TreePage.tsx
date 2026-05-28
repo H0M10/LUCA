@@ -173,7 +173,7 @@ export function TreePage() {
                 </button>
               </div>
               <p className="font-sans text-xs italic text-ink-500">
-                {view === 'tree' && 'Árbol completo — arrastra/scroll para navegar, zoom con ＋ －, click en una persona para ver/editar.'}
+                {view === 'tree' && 'Arrastra para mover · rueda o ＋－ para zoom · pasa el cursor sobre una tarjeta y usa "+ Agregar familiar".'}
                 {view === 'list' && 'Lista ordenada — útil para buscar.'}
               </p>
             </div>
@@ -188,10 +188,7 @@ export function TreePage() {
                   const p = tree.persons.find((x) => x.id === personId);
                   if (p) setOpenPerson(p);
                 }}
-                onStartLink={(personId) => {
-                  const p = tree.persons.find((x) => x.id === personId);
-                  if (p) setOpenPerson(p);
-                }}
+                onAdd={setQuickAdd}
                 onDelete={(personId) => {
                   const p = tree.persons.find((x) => x.id === personId);
                   if (p) setOpenPerson(p);
