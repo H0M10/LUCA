@@ -253,6 +253,7 @@ export function TreePage() {
         <QuickAddDialog
           treeId={tree.id}
           relation={quickAdd}
+          persons={tree.persons}
           onClose={() => setQuickAdd(null)}
         />
       )}

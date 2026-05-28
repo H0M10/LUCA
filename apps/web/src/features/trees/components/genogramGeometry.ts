@@ -188,29 +188,50 @@ export function buildGenogramEdges(rels: RelationshipDto[], layout: Layout) {
 
   const partners: PartnerEdge[] = [];
   for (const r of rels.filter((r) => r.type === 'partner')) {
-    const A = center(r.fromPersonId);
-    const B = center(r.toPersonId);
-    if (!A || !B) continue;
-    const [a, b] = A.cx <= B.cx ? [A, B] : [B, A];
-    const unionY = Math.max(a.bottom, b.bottom) + GAP_Y * 0.32;
-    const midX = (a.cx + b.cx) / 2;
+    const pa = layout.posById.get(r.fromPersonId);
+    const pb = layout.posById.get(r.toPersonId);
+    if (!pa || !pb) continue;
+    const [L, R] = pa.x <= pb.x ? [pa, pb] : [pb, pa];
     const sub = r.subtype;
+    const sameRow = Math.abs(L.y - R.y) < 1;
+    const gap = R.x - (L.x + NODE_W);
+    const inline = sameRow && gap > 0 && gap <= GAP_X + 1; // son vecinos = pareja
+    let segs: Seg[];
+    let midX: number;
+    let midY: number;
+    if (inline) {
+      // Barra horizontal ENTRE las dos tarjetas (estilo genograma clásico)
+      const y = L.y + NODE_H / 2;
+      const x1 = L.x + NODE_W;
+      const x2 = R.x;
+      segs = [{ x1, y1: y, x2, y2: y }];
+      midX = (x1 + x2) / 2;
+      midY = y;
+    } else {
+      // Parejas no adyacentes (varias parejas, lejanas): grapa por debajo
+      const aCx = L.x + NODE_W / 2;
+      const bCx = R.x + NODE_W / 2;
+      const unionY = Math.max(L.y, R.y) + NODE_H + GAP_Y * 0.32;
+      segs = [
+        { x1: aCx, y1: L.y + NODE_H, x2: aCx, y2: unionY },
+        { x1: bCx, y1: R.y + NODE_H, x2: bCx, y2: unionY },
+        { x1: aCx, y1: unionY, x2: bCx, y2: unionY },
+      ];
+      midX = (aCx + bCx) / 2;
+      midY = unionY;
+    }
     partners.push({
       relId: r.id,
       subtype: sub,
-      segs: [
-        { x1: a.cx, y1: a.bottom, x2: a.cx, y2: unionY },
-        { x1: b.cx, y1: b.bottom, x2: b.cx, y2: unionY },
-        { x1: a.cx, y1: unionY, x2: b.cx, y2: unionY },
-      ],
+      segs,
       midX,
-      midY: unionY,
+      midY,
       slashes: sub === 'divorced' ? 2 : sub === 'separated' ? 1 : 0,
       dashed: sub === 'cohabitation' || sub === 'engaged',
       ended: sub === 'divorced' || sub === 'separated' || sub === 'widowed',
       touches: new Set([r.fromPersonId, r.toPersonId]),
     });
-    coupleUnion.set([r.fromPersonId, r.toPersonId].sort().join('|'), { x: midX, y: unionY });
+    coupleUnion.set([r.fromPersonId, r.toPersonId].sort().join('|'), { x: midX, y: midY });
   }
 
   // Agrupar hijos por su conjunto de padres
@@ -235,13 +256,32 @@ export function buildGenogramEdges(rels: RelationshipDto[], layout: Layout) {
     let parentBar: { x1: number; x2: number; y: number } | null = null;
     let parentStubs: Array<{ x: number; fromY: number; toY: number }> = [];
     if (parents.length >= 2) {
-      const up = coupleUnion.get(parents.join('|'));
-      if (up) {
-        anchorX = up.x;
-        anchorY = up.y;
+      // ¿Hay una PAREJA registrada entre los padres? Anclamos a su unión.
+      let coupleUP: { x: number; y: number } | null = null;
+      let couplePair: [string, string] | null = null;
+      for (let i = 0; i < parents.length && !coupleUP; i++) {
+        for (let j = i + 1; j < parents.length; j++) {
+          const up = coupleUnion.get([parents[i]!, parents[j]!].sort().join('|'));
+          if (up) {
+            coupleUP = up;
+            couplePair = [parents[i]!, parents[j]!];
+            break;
+          }
+        }
+      }
+      if (coupleUP && couplePair) {
+        anchorX = coupleUP.x;
+        anchorY = coupleUP.y;
+        // Padres adicionales (no parte de la pareja) se conectan a la unión.
+        const extras = parents.filter((p) => !couplePair!.includes(p));
+        const cs = extras.map(center).filter(Boolean) as NonNullable<ReturnType<typeof center>>[];
+        if (cs.length) {
+          const xs = [anchorX, ...cs.map((c) => c.cx)];
+          parentBar = { x1: Math.min(...xs), x2: Math.max(...xs), y: anchorY };
+          parentStubs = cs.map((c) => ({ x: c.cx, fromY: c.bottom, toY: anchorY }));
+        }
       } else {
-        // Co-padres que NO son pareja registrada: los unimos con una barra
-        // para que el descenso al hijo no quede "suelto".
+        // Ningún par es pareja: barra que une a todos los co-padres.
         const cs = parents.map(center).filter(Boolean) as NonNullable<ReturnType<typeof center>>[];
         if (!cs.length) continue;
         anchorY = Math.max(...cs.map((c) => c.bottom)) + GAP_Y * 0.32;

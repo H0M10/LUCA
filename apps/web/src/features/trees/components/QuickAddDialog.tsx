@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, ErrorAlert, Field, Input } from '../../../shared/components/ui.js';
+import { Button, ErrorAlert, Field, Input, Select } from '../../../shared/components/ui.js';
 import { DateField } from '../../../shared/components/DateField.js';
 import { PlaceSearch } from './PlaceSearch.js';
 import * as api from '../api/trees.js';
@@ -18,7 +18,16 @@ export type Relation =
 interface Props {
   treeId: string;
   relation: Relation;
+  persons?: PersonDto[];
   onClose: () => void;
+}
+
+/** Persona "ancla" del contexto de la relación (a quién estamos vinculando). */
+function contextId(r: Relation): string | null {
+  if (r.kind === 'father' || r.kind === 'mother') return r.child.id;
+  if (r.kind === 'partner' || r.kind === 'sibling') return r.of.id;
+  if (r.kind === 'child') return r.parent.id;
+  return null;
 }
 
 function inferGender(r: Relation): 'male' | 'female' | undefined {
@@ -109,9 +118,15 @@ function meta(r: Relation): {
   }
 }
 
-export function QuickAddDialog({ treeId, relation, onClose }: Props) {
+export function QuickAddDialog({ treeId, relation, persons = [], onClose }: Props) {
   const qc = useQueryClient();
   const inferred = inferApellidos(relation);
+  // Modo: crear persona NUEVA o VINCULAR a alguien que ya existe en el árbol.
+  const canLinkExisting = relation.kind !== 'self';
+  const [mode, setMode] = useState<'new' | 'existing'>('new');
+  const [existingId, setExistingId] = useState('');
+  const ctxId = contextId(relation);
+  const eligible = persons.filter((p) => p.id !== ctxId);
   const [firstName, setFirstName] = useState('');
   const [apellidoPaterno, setApellidoPaterno] = useState(inferred.paterno);
   const [apellidoMaterno, setApellidoMaterno] = useState(inferred.materno);
@@ -157,12 +172,17 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
           : {}),
         ...(relation.kind === 'self' ? { isProband: true } : {}),
       };
-      const newPerson = await api.addPerson(treeId, personInput);
+      // Vincular a una persona EXISTENTE o crear una nueva
+      const linking = mode === 'existing' && existingId;
+      const targetId = linking ? existingId : (await api.addPerson(treeId, personInput)).id;
+      const targetName = linking
+        ? eligible.find((p) => p.id === existingId)?.firstName ?? 'Persona'
+        : firstName.trim();
 
       if (relation.kind === 'father' || relation.kind === 'mother') {
         await api.addRelationship({
           type: 'parent',
-          fromPersonId: newPerson.id,
+          fromPersonId: targetId,
           toPersonId: relation.child.id,
           subtype: relSubtype || 'biological',
         });
@@ -170,20 +190,18 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
         // los co-padres como pareja automáticamente (papá ↔ mamá del mismo hijo).
         const tree = await api.getTree(treeId);
         const coParents = tree.relationships
-          .filter(
-            (r) => r.type === 'parent' && r.toPersonId === relation.child.id && r.fromPersonId !== newPerson.id,
-          )
+          .filter((r) => r.type === 'parent' && r.toPersonId === relation.child.id && r.fromPersonId !== targetId)
           .map((r) => r.fromPersonId);
         for (const pid of coParents) {
           await api
-            .addRelationship({ type: 'partner', fromPersonId: newPerson.id, toPersonId: pid, subtype: 'marriage' })
+            .addRelationship({ type: 'partner', fromPersonId: targetId, toPersonId: pid, subtype: 'marriage' })
             .catch(() => undefined); // ignora si ya existe esa unión
         }
       } else if (relation.kind === 'child') {
         await api.addRelationship({
           type: 'parent',
           fromPersonId: relation.parent.id,
-          toPersonId: newPerson.id,
+          toPersonId: targetId,
           subtype: relSubtype || 'biological',
         });
         // Si el progenitor tiene pareja, el hijo también desciende de esa pareja.
@@ -195,22 +213,16 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
               (r.fromPersonId === relation.parent.id || r.toPersonId === relation.parent.id),
           )
           .map((r) => (r.fromPersonId === relation.parent.id ? r.toPersonId : r.fromPersonId));
-        // Solo auto-vinculamos si hay EXACTAMENTE una pareja (caso inequívoco).
         if (partners.length === 1) {
           await api
-            .addRelationship({
-              type: 'parent',
-              fromPersonId: partners[0]!,
-              toPersonId: newPerson.id,
-              subtype: 'biological',
-            })
+            .addRelationship({ type: 'parent', fromPersonId: partners[0]!, toPersonId: targetId, subtype: 'biological' })
             .catch(() => undefined);
         }
       } else if (relation.kind === 'partner') {
         await api.addRelationship({
           type: 'partner',
           fromPersonId: relation.of.id,
-          toPersonId: newPerson.id,
+          toPersonId: targetId,
           ...(relSubtype ? { subtype: relSubtype } : {}),
         });
       } else if (relation.kind === 'sibling') {
@@ -222,26 +234,24 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
           toast.info('Hermano agregado sin padres comunes', 'Cuando registres a los padres se conectarán automáticamente.');
         } else {
           for (const pid of parentsOf) {
-            await api.addRelationship({
-              type: 'parent',
-              fromPersonId: pid,
-              toPersonId: newPerson.id,
-              subtype: 'biological',
-            });
+            await api
+              .addRelationship({ type: 'parent', fromPersonId: pid, toPersonId: targetId, subtype: 'biological' })
+              .catch(() => undefined);
           }
         }
       }
-      return newPerson;
+      return targetName;
     },
-    onSuccess: (p) => {
-      toast.success(`${p.firstName} agregado al árbol`);
+    onSuccess: (name) => {
+      toast.success(`${name} ${mode === 'existing' ? 'vinculado' : 'agregado'} al árbol`);
       qc.invalidateQueries({ queryKey: ['tree', treeId] });
       onClose();
     },
     onError: (e) => setError((e as { message?: string }).message ?? 'Error al guardar'),
   });
 
-  const canSubmit = firstName.trim().length > 0 && !mutation.isPending;
+  const canSubmit =
+    (mode === 'existing' ? existingId.length > 0 : firstName.trim().length > 0) && !mutation.isPending;
 
   return (
     <div
@@ -285,36 +295,73 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
           autoComplete="off"
           className="space-y-5 px-6 py-6"
         >
-          {/* Bloque mínimo — nombre + apellidos (estilo mexicano) */}
-          <div className="space-y-4">
-            <Field number="01" label="Nombre(s)">
-              <Input
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                autoFocus
-                autoComplete="off"
-                placeholder={relation.kind === 'self' ? 'Tu nombre' : 'Su nombre'}
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Apellido paterno" hint="opcional">
-                <Input
-                  value={apellidoPaterno}
-                  onChange={(e) => setApellidoPaterno(e.target.value)}
-                  autoComplete="off"
-                  placeholder="Paterno"
-                />
-              </Field>
-              <Field label="Apellido materno" hint="opcional">
-                <Input
-                  value={apellidoMaterno}
-                  onChange={(e) => setApellidoMaterno(e.target.value)}
-                  autoComplete="off"
-                  placeholder="Materno"
-                />
-              </Field>
+          {/* Modo: crear nueva persona o vincular a alguien que ya existe */}
+          {canLinkExisting && eligible.length > 0 && (
+            <div className="inline-flex rounded-full border border-paper-300 bg-paper-100 p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setMode('new')}
+                className={`rounded-full px-4 py-1.5 font-sans transition ${
+                  mode === 'new' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+                }`}
+              >
+                Nueva persona
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('existing')}
+                className={`rounded-full px-4 py-1.5 font-sans transition ${
+                  mode === 'existing' ? 'bg-ink-900 text-paper-50' : 'text-ink-500 hover:text-ink-900'
+                }`}
+              >
+                Vincular existente
+              </button>
             </div>
-          </div>
+          )}
+
+          {mode === 'existing' ? (
+            <Field label="Selecciona a la persona" hint="ya en tu árbol">
+              <Select value={existingId} onChange={(e) => setExistingId(e.target.value)} autoFocus>
+                <option value="">— Elige una persona —</option>
+                {eligible.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.firstName} {p.lastName ?? ''}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            /* Bloque mínimo — nombre + apellidos (estilo mexicano) */
+            <div className="space-y-4">
+              <Field number="01" label="Nombre(s)">
+                <Input
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  autoFocus
+                  autoComplete="off"
+                  placeholder={relation.kind === 'self' ? 'Tu nombre' : 'Su nombre'}
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Apellido paterno" hint="opcional">
+                  <Input
+                    value={apellidoPaterno}
+                    onChange={(e) => setApellidoPaterno(e.target.value)}
+                    autoComplete="off"
+                    placeholder="Paterno"
+                  />
+                </Field>
+                <Field label="Apellido materno" hint="opcional">
+                  <Input
+                    value={apellidoMaterno}
+                    onChange={(e) => setApellidoMaterno(e.target.value)}
+                    autoComplete="off"
+                    placeholder="Materno"
+                  />
+                </Field>
+              </div>
+            </div>
+          )}
 
           {/* Subtipo de la relación (matrimonio/unión libre/ex · biológico/adoptivo/padrastro) */}
           {subCfg && (
@@ -339,16 +386,18 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
           )}
 
           {/* Lugar de nacimiento — visible siempre para que sea fácil de encontrar */}
-          <Field label="📍 Lugar de nacimiento" hint="opcional · aparece en el Globo 3D">
-            <PlaceSearch value={place?.display ?? null} onSelect={setPlace} onClear={() => setPlace(null)} />
-          </Field>
+          {mode === 'new' && (
+            <Field label="📍 Lugar de nacimiento" hint="opcional · aparece en el Globo 3D">
+              <PlaceSearch value={place?.display ?? null} onSelect={setPlace} onClear={() => setPlace(null)} />
+            </Field>
+          )}
 
           {m.hint && (
             <p className="font-display text-sm italic text-ink-500">{m.hint}</p>
           )}
 
           {/* Toggle progressive disclosure */}
-          {!showMore ? (
+          {mode === 'new' && (!showMore ? (
             <button
               type="button"
               onClick={() => setShowMore(true)}
@@ -415,7 +464,7 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
                 )}
               </div>
             </div>
-          )}
+          ))}
 
           <ErrorAlert message={error ?? undefined} />
 

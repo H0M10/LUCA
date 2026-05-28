@@ -194,7 +194,7 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
       </aside>
 
       {addRelation && (
-        <QuickAddDialog treeId={treeId} relation={addRelation} onClose={() => setAddRelation(null)} />
+        <QuickAddDialog treeId={treeId} relation={addRelation} persons={persons} onClose={() => setAddRelation(null)} />
       )}
 
       {editing && (
