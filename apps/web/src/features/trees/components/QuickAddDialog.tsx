@@ -26,6 +26,29 @@ function inferGender(r: Relation): 'male' | 'female' | undefined {
   return undefined;
 }
 
+// Subtipos ofrecidos según la relación que se está creando
+const PARTNER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'marriage', label: 'Matrimonio' },
+  { value: 'cohabitation', label: 'Unión libre' },
+  { value: 'engaged', label: 'Compromiso' },
+  { value: 'separated', label: 'Separados' },
+  { value: 'divorced', label: 'Divorciados / ex' },
+  { value: 'widowed', label: 'Viudez' },
+];
+const PARENT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'biological', label: 'Biológico' },
+  { value: 'adoptive', label: 'Adoptivo' },
+  { value: 'step', label: 'Padrastro / madrastra' },
+  { value: 'foster', label: 'De crianza' },
+];
+
+function subtypeOptions(r: Relation): { options: Array<{ value: string; label: string }>; label: string; default: string } | null {
+  if (r.kind === 'partner') return { options: PARTNER_OPTIONS, label: 'Tipo de unión', default: 'marriage' };
+  if (r.kind === 'father' || r.kind === 'mother' || r.kind === 'child')
+    return { options: PARENT_OPTIONS, label: 'Tipo de filiación', default: 'biological' };
+  return null;
+}
+
 function inferApellidos(r: Relation): { paterno: string; materno: string } {
   // Por convención, hijos y hermanos suelen compartir los apellidos del contexto.
   if (r.kind === 'child') return { paterno: r.parent.apellidoPaterno ?? '', materno: r.parent.apellidoMaterno ?? '' };
@@ -99,6 +122,8 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
   const [deathDate, setDeathDate] = useState('');
   const [showMore, setShowMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const subCfg = subtypeOptions(relation);
+  const [relSubtype, setRelSubtype] = useState<string>(subCfg?.default ?? '');
 
   // ESC para cerrar
   useEffect(() => {
@@ -129,20 +154,21 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
           type: 'parent',
           fromPersonId: newPerson.id,
           toPersonId: relation.child.id,
-          subtype: 'biological',
+          subtype: relSubtype || 'biological',
         });
       } else if (relation.kind === 'child') {
         await api.addRelationship({
           type: 'parent',
           fromPersonId: relation.parent.id,
           toPersonId: newPerson.id,
-          subtype: 'biological',
+          subtype: relSubtype || 'biological',
         });
       } else if (relation.kind === 'partner') {
         await api.addRelationship({
           type: 'partner',
           fromPersonId: relation.of.id,
           toPersonId: newPerson.id,
+          ...(relSubtype ? { subtype: relSubtype } : {}),
         });
       } else if (relation.kind === 'sibling') {
         const tree = await api.getTree(treeId);
@@ -246,6 +272,28 @@ export function QuickAddDialog({ treeId, relation, onClose }: Props) {
               </Field>
             </div>
           </div>
+
+          {/* Subtipo de la relación (matrimonio/unión libre/ex · biológico/adoptivo/padrastro) */}
+          {subCfg && (
+            <Field label={subCfg.label}>
+              <div className="flex flex-wrap gap-2">
+                {subCfg.options.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setRelSubtype(o.value)}
+                    className={`rounded-full border px-4 py-1.5 font-sans text-sm transition ${
+                      relSubtype === o.value
+                        ? 'border-moss-700 bg-moss-700 text-white'
+                        : 'border-paper-400 bg-paper-50 text-ink-700 hover:border-moss-700'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          )}
 
           {m.hint && (
             <p className="font-display text-sm italic text-ink-500">{m.hint}</p>

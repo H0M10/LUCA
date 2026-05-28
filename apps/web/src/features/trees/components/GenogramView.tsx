@@ -2,6 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PersonDto, RelationshipDto } from '../api/trees.js';
 import type { Relation } from './QuickAddDialog.js';
 import { PersonAvatar } from './PersonAvatar.js';
+import {
+  computeLayout,
+  buildGenogramEdges,
+  NODE_W,
+  NODE_H,
+  PAD,
+  type Seg,
+} from './genogramGeometry.js';
+
+// Re-exportamos para consumidores existentes (PrintableGenogram)
+export { computeLayout, NODE_W, NODE_H, GAP_X, GAP_Y, PAD } from './genogramGeometry.js';
+export type { Layout } from './genogramGeometry.js';
 
 interface Props {
   persons: PersonDto[];
@@ -12,107 +24,39 @@ interface Props {
   onAdd: (relation: Relation) => void;
 }
 
-export interface Layout {
-  generations: Map<number, string[]>; // gen -> personIds
-  posById: Map<string, { x: number; y: number; gen: number }>;
-  maxGen: number;
-  maxPerGen: number;
+// Colores por tipo de vínculo
+const C_UNION = '#123F52'; // matrimonio / unión vigente
+const C_INFORMAL = '#42A7A5'; // unión libre / compromiso / adoptivo
+const C_ENDED = '#E0685A'; // separación / divorcio
+const C_BIO = '#123F52'; // filiación biológica
+const C_HILITE = '#42A7A5';
+
+function seg(s: Seg, key: string, stroke: string, width: number, dashed?: boolean, dim?: boolean) {
+  return (
+    <line
+      key={key}
+      x1={s.x1}
+      y1={s.y1}
+      x2={s.x2}
+      y2={s.y2}
+      stroke={stroke}
+      strokeWidth={width}
+      strokeLinecap="round"
+      strokeDasharray={dashed ? '7 5' : undefined}
+      style={{ opacity: dim ? 0.12 : 1, transition: 'opacity .25s, stroke-width .2s' }}
+    />
+  );
 }
 
-export const NODE_W = 200;
-export const NODE_H = 130;
-export const GAP_X = 60;
-export const GAP_Y = 80;
-export const PAD = 40;
-
-export function computeLayout(persons: PersonDto[], rels: RelationshipDto[]): Layout {
-  // Genealogía: gen 0 = proband; gen + para padres; gen - para hijos.
-  // Si no hay proband, usar el de mayor edad como referencia.
-  const proband = persons.find((p) => p.isProband) ?? persons[0];
-  const generations = new Map<number, string[]>();
-  const genById = new Map<string, number>();
-
-  if (!proband) {
-    return { generations, posById: new Map(), maxGen: 0, maxPerGen: 0 };
-  }
-
-  // BFS asignando generaciones
-  const queue: Array<{ id: string; gen: number }> = [{ id: proband.id, gen: 0 }];
-  while (queue.length) {
-    const { id, gen } = queue.shift()!;
-    if (genById.has(id)) continue;
-    genById.set(id, gen);
-
-    // padres → gen + 1
-    rels
-      .filter((r) => r.type === 'parent' && r.toPersonId === id)
-      .forEach((r) => {
-        if (!genById.has(r.fromPersonId)) queue.push({ id: r.fromPersonId, gen: gen + 1 });
-      });
-    // hijos → gen - 1
-    rels
-      .filter((r) => r.type === 'parent' && r.fromPersonId === id)
-      .forEach((r) => {
-        if (!genById.has(r.toPersonId)) queue.push({ id: r.toPersonId, gen: gen - 1 });
-      });
-    // pareja → misma gen
-    rels
-      .filter((r) => r.type === 'partner' && (r.fromPersonId === id || r.toPersonId === id))
-      .forEach((r) => {
-        const other = r.fromPersonId === id ? r.toPersonId : r.fromPersonId;
-        if (!genById.has(other)) queue.push({ id: other, gen });
-      });
-  }
-
-  // Personas no conectadas — generación 0 (separadas)
-  persons.forEach((p) => {
-    if (!genById.has(p.id)) genById.set(p.id, 0);
-  });
-
-  // Agrupar por generación
-  for (const [id, gen] of genById) {
-    if (!generations.has(gen)) generations.set(gen, []);
-    generations.get(gen)!.push(id);
-  }
-
-  const gens = [...generations.keys()].sort((a, b) => b - a); // mayor (ancestros) primero
-  const maxGen = gens[0] ?? 0;
-  const minGen = gens[gens.length - 1] ?? 0;
-  let maxPerGen = 0;
-  for (const ids of generations.values()) maxPerGen = Math.max(maxPerGen, ids.length);
-
-  // Calcular posiciones
-  const posById = new Map<string, { x: number; y: number; gen: number }>();
-  gens.forEach((g) => {
-    const ids = generations.get(g)!;
-    const totalWidth = ids.length * NODE_W + (ids.length - 1) * GAP_X;
-    const startX = PAD + (maxPerGen * (NODE_W + GAP_X) - totalWidth) / 2;
-    const y = PAD + (maxGen - g) * (NODE_H + GAP_Y);
-    ids.forEach((id, idx) => {
-      posById.set(id, { x: startX + idx * (NODE_W + GAP_X), y, gen: g });
-    });
-  });
-
-  // ajustar maxGen para el viewBox
-  return { generations, posById, maxGen: maxGen - minGen, maxPerGen };
-}
-
-export function GenogramView({
-  persons,
-  relationships,
-  linkMode,
-  onSelectAsTarget,
-  onSelect,
-  onAdd,
-}: Props) {
+export function GenogramView({ persons, relationships, linkMode, onSelectAsTarget, onSelect, onAdd }: Props) {
   const layout = useMemo(() => computeLayout(persons, relationships), [persons, relationships]);
-  // Persona resaltada: al pasar el cursor, ilumina TODAS sus conexiones.
+  const edges = useMemo(() => buildGenogramEdges(relationships, layout), [relationships, layout]);
   const [hovered, setHovered] = useState<string | null>(null);
 
-  const svgWidth = PAD * 2 + layout.maxPerGen * NODE_W + (layout.maxPerGen - 1) * GAP_X;
-  const svgHeight = PAD * 2 + (layout.maxGen + 1) * NODE_H + layout.maxGen * GAP_Y;
+  const svgWidth = layout.width;
+  const svgHeight = layout.height;
 
-  // ── Lienzo navegable estilo Figma: arrastrar para mover, rueda para zoom ──
+  // ── Lienzo navegable (arrastrar + zoom) ──
   const viewportRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [tx, setTx] = useState(24);
@@ -132,14 +76,12 @@ export function GenogramView({
     setTy(Math.max(16, (el.clientHeight - svgHeight * z) / 2));
   };
 
-  // Ajustar a la vista al cargar y cuando cambia el tamaño del árbol
   useEffect(() => {
     const id = requestAnimationFrame(fitToView);
     return () => cancelAnimationFrame(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [svgWidth, svgHeight]);
 
-  // Zoom con la rueda hacia el cursor (listener nativo no-pasivo)
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return undefined;
@@ -172,7 +114,7 @@ export function GenogramView({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('[data-no-pan]')) return; // clicks en tarjetas
+    if ((e.target as HTMLElement).closest('[data-no-pan]')) return;
     pan.current = { active: true, sx: e.clientX, sy: e.clientY, ox: tx, oy: ty };
     setGrabbing(true);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -189,7 +131,7 @@ export function GenogramView({
 
   if (persons.length === 0) return null;
 
-  // Conjunto de personas conectadas directamente a la resaltada (para atenuar el resto)
+  // Personas conectadas a la resaltada (para atenuar el resto)
   const connected = new Set<string>();
   if (hovered) {
     connected.add(hovered);
@@ -198,82 +140,12 @@ export function GenogramView({
       if (r.toPersonId === hovered) connected.add(r.fromPersonId);
     });
   }
-
-  // ── Conexiones curvas, una por relación (se ven TODAS) ──────────
-  const center = (id: string) => {
-    const p = layout.posById.get(id);
-    return p ? { cx: p.x + NODE_W / 2, top: p.y, bottom: p.y + NODE_H, midY: p.y + NODE_H / 2, x: p.x } : null;
-  };
-  const touches = (r: RelationshipDto) =>
-    !hovered || r.fromPersonId === hovered || r.toPersonId === hovered;
-
-  const parentEdges = relationships
-    .filter((r) => r.type === 'parent')
-    .map((r, i) => {
-      const from = center(r.fromPersonId);
-      const to = center(r.toPersonId);
-      if (!from || !to) return null;
-      const x1 = from.cx;
-      const y1 = from.bottom;
-      const x2 = to.cx;
-      const y2 = to.top;
-      const dy = (y2 - y1) * 0.5;
-      const active = touches(r);
-      return (
-        <path
-          key={`pe-${r.id}`}
-          d={`M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`}
-          fill="none"
-          stroke={hovered && active ? '#42A7A5' : '#123F52'}
-          strokeWidth={hovered && active ? 2.6 : 1.6}
-          strokeLinecap="round"
-          style={{
-            opacity: active ? 1 : 0.1,
-            transition: 'opacity .25s, stroke-width .25s, stroke .25s',
-            animationDelay: `${0.15 + i * 0.03}s`,
-          }}
-        />
-      );
-    });
-
-  const partnerEdges = relationships
-    .filter((r) => r.type === 'partner')
-    .map((r, i) => {
-      const from = center(r.fromPersonId);
-      const to = center(r.toPersonId);
-      if (!from || !to) return null;
-      const isEnded = r.subtype === 'divorced' || r.subtype === 'separated';
-      // ordena izquierda→derecha
-      const [a, b] = from.x <= to.x ? [from, to] : [to, from];
-      const x1 = a.x + NODE_W;
-      const x2 = b.x;
-      const y = a.midY;
-      const dip = 18;
-      const midX = (x1 + x2) / 2;
-      const active = touches(r);
-      const color = isEnded ? '#E0685A' : '#8AB96B';
-      return (
-        <g
-          key={`pn-${r.id}`}
-          style={{ opacity: active ? 1 : 0.1, transition: 'opacity .25s' }}
-        >
-          <path
-            d={`M ${x1} ${y} Q ${midX} ${y + dip}, ${x2} ${b.midY}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={hovered && active ? 2.6 : 1.8}
-            strokeLinecap="round"
-            strokeDasharray={isEnded ? '6 4' : undefined}
-            style={{ transition: 'stroke-width .25s' }}
-          />
-          <circle cx={midX} cy={y + dip} r="3.5" fill={color} />
-        </g>
-      );
-    });
+  const dimEdge = (touches: Set<string>) => !!hovered && !touches.has(hovered);
+  const liveEdge = (touches: Set<string>) => !!hovered && touches.has(hovered);
 
   return (
     <div className="relative rounded-2xl border border-paper-300 bg-paper-50 shadow-paper">
-      {/* Controles — flotan sobre el árbol */}
+      {/* Controles */}
       <div className="absolute right-3 top-3 z-30 flex flex-col overflow-hidden rounded-2xl border border-paper-300 bg-white shadow-paper">
         <button onClick={() => zoomBy(1.2)} className="px-3 py-2 font-sans text-base font-semibold text-ink-700 transition hover:bg-moss-50 hover:text-moss-700" title="Acercar">＋</button>
         <span className="h-px bg-paper-300" />
@@ -285,7 +157,7 @@ export function GenogramView({
         {Math.round(zoom * 100)}%
       </div>
 
-      {/* Lienzo: arrastra para mover · rueda para zoom */}
+      {/* Lienzo */}
       <div
         ref={viewportRef}
         onPointerDown={onPointerDown}
@@ -296,72 +168,134 @@ export function GenogramView({
         style={{ backgroundColor: '#F6F8F9', backgroundImage: 'radial-gradient(#D9DDE3 0.7px, transparent 0.7px)', backgroundSize: '22px 22px' }}
       >
         <div style={{ transform: `translate(${tx}px, ${ty}px) scale(${zoom})`, transformOrigin: '0 0', width: svgWidth, height: svgHeight }}>
-      <svg
-        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-        width={svgWidth}
-        height={svgHeight}
-        className="block"
-      >
+          <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width={svgWidth} height={svgHeight} className="block">
+            {/* Conexiones (debajo de las cards) */}
+            <g className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
+              {/* Filiación: anclaje → bus → cada hijo */}
+              {edges.childGroups.map((grp, gi) => {
+                const dim = dimEdge(grp.touches);
+                const live = liveEdge(grp.touches);
+                const stem = C_BIO;
+                const w = live ? 2.6 : 1.7;
+                return (
+                  <g key={`cg-${gi}`}>
+                    {seg({ x1: grp.anchorX, y1: grp.anchorY, x2: grp.anchorX, y2: grp.busY }, `st-${gi}`, stem, w, false, dim)}
+                    {grp.barX2 > grp.barX1 &&
+                      seg({ x1: grp.barX1, y1: grp.busY, x2: grp.barX2, y2: grp.busY }, `bar-${gi}`, stem, w, false, dim)}
+                    {grp.drops.map((d, di) =>
+                      seg(
+                        { x1: d.x, y1: grp.busY, x2: d.x, y2: d.topY },
+                        `dr-${gi}-${di}`,
+                        d.dashed ? C_INFORMAL : C_BIO,
+                        w,
+                        d.dashed,
+                        dim,
+                      ),
+                    )}
+                  </g>
+                );
+              })}
 
-        {/* Conexiones (debajo de las cards), aparecen con un fundido suave */}
-        <g className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
-          {partnerEdges}
-          {parentEdges}
-        </g>
-
-        {/* Cards de personas */}
-        {persons.map((p, i) => {
-          const pos = layout.posById.get(p.id);
-          if (!pos) return null;
-          const isTarget = linkMode && linkMode.from !== p.id;
-          const isSource = linkMode && linkMode.from === p.id;
-          return (
-            <g
-              key={p.id}
-              transform={`translate(${pos.x}, ${pos.y})`}
-              className="animate-grow-in"
-              style={{ animationDelay: `${0.15 + i * 0.08}s`, transformBox: 'fill-box', transformOrigin: 'center' }}
-            >
-              <foreignObject width={NODE_W} height={NODE_H} style={{ overflow: 'visible' }}>
-                <PersonNode
-                  person={p}
-                  isTarget={isTarget}
-                  isSource={isSource}
-                  dimmed={!!hovered && !connected.has(p.id)}
-                  onHover={() => setHovered(p.id)}
-                  onSelectAsTarget={() => onSelectAsTarget(p.id)}
-                  onSelect={() => onSelect(p.id)}
-                  onAdd={onAdd}
-                />
-              </foreignObject>
+              {/* Uniones de pareja (grapas) + barras de separación/divorcio */}
+              {edges.partners.map((e) => {
+                const dim = dimEdge(e.touches);
+                const live = liveEdge(e.touches);
+                const color = live ? C_HILITE : e.ended ? C_ENDED : e.dashed ? C_INFORMAL : C_UNION;
+                const w = live ? 2.8 : 2;
+                return (
+                  <g key={`pe-${e.relId}`}>
+                    {e.segs.map((s, i) => seg(s, `pe-${e.relId}-${i}`, color, w, e.dashed, dim))}
+                    {e.slashes > 0 && !dim && <Slashes x={e.midX} y={e.midY} count={e.slashes as 1 | 2} color={C_ENDED} />}
+                  </g>
+                );
+              })}
             </g>
-          );
-        })}
-      </svg>
+
+            {/* Cards de personas */}
+            {persons.map((p, i) => {
+              const pos = layout.posById.get(p.id);
+              if (!pos) return null;
+              const isTarget = linkMode && linkMode.from !== p.id;
+              const isSource = linkMode && linkMode.from === p.id;
+              return (
+                <g
+                  key={p.id}
+                  transform={`translate(${pos.x}, ${pos.y})`}
+                  className="animate-grow-in"
+                  style={{ animationDelay: `${0.15 + i * 0.06}s`, transformBox: 'fill-box', transformOrigin: 'center' }}
+                >
+                  <foreignObject width={NODE_W} height={NODE_H} style={{ overflow: 'visible' }}>
+                    <PersonNode
+                      person={p}
+                      isTarget={isTarget}
+                      isSource={isSource}
+                      dimmed={!!hovered && !connected.has(p.id)}
+                      onHover={() => setHovered(p.id)}
+                      onSelectAsTarget={() => onSelectAsTarget(p.id)}
+                      onSelect={() => onSelect(p.id)}
+                      onAdd={onAdd}
+                    />
+                  </foreignObject>
+                </g>
+              );
+            })}
+          </svg>
         </div>
       </div>
 
-      {/* Legend abajo */}
+      {/* Leyenda */}
       <div className="border-t border-paper-300 bg-paper-100 px-4 py-2">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[9px] uppercase tracking-widest text-ink-500">
-          <span className="flex items-center gap-1.5">
-            <svg width="22" height="10"><path d="M2 8 C2 2, 20 8, 20 2" stroke="#123F52" strokeWidth="1.6" fill="none"/></svg>
-            Padre–hijo/a
-          </span>
-          <span className="flex items-center gap-1.5">
-            <svg width="22" height="10"><path d="M1 3 Q11 11, 21 3" stroke="#8AB96B" strokeWidth="1.8" fill="none"/></svg>
-            Pareja
-          </span>
-          <span className="flex items-center gap-1.5">
-            <svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#E0685A" strokeWidth="1.5" strokeDasharray="4 3"/></svg>
-            Separados
-          </span>
+          <LegendLine color={C_BIO} label="Filiación" />
+          <LegendLine color={C_INFORMAL} dashed label="Adoptivo / hijastro" />
+          <LegendLine color={C_UNION} label="Matrimonio" />
+          <LegendLine color={C_INFORMAL} dashed label="Unión libre" />
+          <LegendSlash count={1} label="Separación" />
+          <LegendSlash count={2} label="Divorcio / ex" />
           <span className="ml-auto normal-case tracking-normal text-ink-400">
-            Arrastra para mover · rueda para zoom · cursor sobre una persona = resalta conexiones
+            Arrastra para mover · rueda para zoom · cursor sobre una persona = resalta sus vínculos
           </span>
         </div>
       </div>
     </div>
+  );
+}
+
+/** Marcas de barra(s) sobre la línea de unión: 1 = separación, 2 = divorcio. */
+function Slashes({ x, y, count, color }: { x: number; y: number; count: 1 | 2; color: string }) {
+  const s = 8;
+  const offsets = count === 2 ? [-5, 5] : [0];
+  return (
+    <>
+      {offsets.map((o, i) => (
+        <line key={i} x1={x + o - s} y1={y + s} x2={x + o + s} y2={y - s} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      ))}
+    </>
+  );
+}
+
+function LegendLine({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <svg width="22" height="6">
+        <line x1="0" y1="3" x2="22" y2="3" stroke={color} strokeWidth="2" strokeDasharray={dashed ? '5 4' : undefined} />
+      </svg>
+      {label}
+    </span>
+  );
+}
+
+function LegendSlash({ count, label }: { count: 1 | 2; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <svg width="22" height="12">
+        <line x1="0" y1="6" x2="22" y2="6" stroke={C_ENDED} strokeWidth="2" />
+        {(count === 2 ? [8, 14] : [11]).map((cx, i) => (
+          <line key={i} x1={cx - 4} y1="11" x2={cx + 4} y2="1" stroke={C_ENDED} strokeWidth="2" />
+        ))}
+      </svg>
+      {label}
+    </span>
   );
 }
 
@@ -405,16 +339,12 @@ function PersonNode({
               : 'border-paper-300 hover:-translate-y-1 hover:border-moss-700 hover:shadow-paper-lg'
       }`}
     >
-      {/* Acento superior de color (turquesa proband, petróleo resto) */}
-      <span
-        className={`block h-1 w-full rounded-t-2xl ${person.isProband ? 'bg-moss-700' : dead ? 'bg-paper-400' : 'bg-ink-900'}`}
-      />
+      <span className={`block h-1 w-full rounded-t-2xl ${person.isProband ? 'bg-moss-700' : dead ? 'bg-paper-400' : 'bg-ink-900'}`} />
 
       {isTarget && (
         <button onClick={onSelectAsTarget} className="absolute inset-0 z-10" aria-label="Seleccionar como objetivo" />
       )}
 
-      {/* Body — abre el panel de la persona (ver/editar/eliminar/salud) */}
       <button onClick={onSelect} className="flex flex-1 cursor-pointer items-center gap-3 px-3 pb-3 pt-2 text-left">
         <PersonAvatar person={person} size={44} />
         <div className="min-w-0 flex-1">
@@ -442,21 +372,17 @@ function PersonNode({
         </div>
       </button>
 
-      {/* Botones de agregar familiar — posicionados alrededor (aparecen al hover) */}
-      {/* Arriba: padres */}
+      {/* Botones de agregar familiar */}
       <div className="absolute -top-3 left-1/2 z-40 flex -translate-x-1/2 gap-1 opacity-0 transition group-hover:opacity-100">
         <AddDot label="Padre" onClick={(e) => add(e, { kind: 'father', child: person })} />
         <AddDot label="Madre" onClick={(e) => add(e, { kind: 'mother', child: person })} />
       </div>
-      {/* Abajo: hijos */}
       <div className="absolute -bottom-3 left-1/2 z-40 -translate-x-1/2 opacity-0 transition group-hover:opacity-100">
         <AddDot label="Hijo/a" onClick={(e) => add(e, { kind: 'child', parent: person })} />
       </div>
-      {/* Izquierda: hermanos */}
       <div className="absolute top-1/2 -left-1 z-40 -translate-x-full -translate-y-1/2 pr-1 opacity-0 transition group-hover:opacity-100">
         <AddDot label="Hermano/a" onClick={(e) => add(e, { kind: 'sibling', of: person })} />
       </div>
-      {/* Derecha: pareja */}
       <div className="absolute top-1/2 -right-1 z-40 translate-x-full -translate-y-1/2 pl-1 opacity-0 transition group-hover:opacity-100">
         <AddDot label="Pareja" onClick={(e) => add(e, { kind: 'partner', of: person })} />
       </div>
@@ -464,7 +390,6 @@ function PersonNode({
   );
 }
 
-/** Botón-píldora "+ etiqueta" para agregar un familiar en una dirección. */
 function AddDot({ label, onClick }: { label: string; onClick: (e: React.MouseEvent) => void }) {
   return (
     <button
@@ -476,4 +401,3 @@ function AddDot({ label, onClick }: { label: string; onClick: (e: React.MouseEve
     </button>
   );
 }
-

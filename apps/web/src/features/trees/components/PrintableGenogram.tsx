@@ -1,5 +1,5 @@
 import type { PersonDto, RelationshipDto } from '../api/trees.js';
-import { computeLayout, NODE_W, NODE_H, PAD } from './GenogramView.js';
+import { computeLayout, buildGenogramEdges, NODE_W, NODE_H } from './genogramGeometry.js';
 
 /**
  * Versión SOLO para impresión / PDF del genograma COMPLETO.
@@ -17,52 +17,57 @@ export function PrintableGenogram({
   const layout = computeLayout(persons, relationships);
   if (persons.length === 0) return null;
 
-  const width = PAD * 2 + layout.maxPerGen * NODE_W + (layout.maxPerGen - 1) * 60;
-  const height = PAD * 2 + (layout.maxGen + 1) * NODE_H + layout.maxGen * 80;
+  const width = layout.width;
+  const height = layout.height;
+  const { partners, childGroups } = buildGenogramEdges(relationships, layout);
 
-  const parentLines = relationships
-    .filter((r) => r.type === 'parent')
-    .map((r) => {
-      const from = layout.posById.get(r.fromPersonId);
-      const to = layout.posById.get(r.toPersonId);
-      if (!from || !to) return null;
-      const x1 = from.x + NODE_W / 2;
-      const y1 = from.y + NODE_H;
-      const x2 = to.x + NODE_W / 2;
-      const y2 = to.y;
-      const midY = (y1 + y2) / 2;
-      return (
-        <path
-          key={`p-${r.id}`}
-          d={`M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`}
-          stroke="#333"
-          strokeWidth="1.2"
-          fill="none"
-        />
+  const parentLines = childGroups.flatMap((grp, gi) => {
+    const lines = [
+      <line key={`st-${gi}`} x1={grp.anchorX} y1={grp.anchorY} x2={grp.anchorX} y2={grp.busY} stroke="#333" strokeWidth="1.2" />,
+    ];
+    if (grp.barX2 > grp.barX1) {
+      lines.push(
+        <line key={`bar-${gi}`} x1={grp.barX1} y1={grp.busY} x2={grp.barX2} y2={grp.busY} stroke="#333" strokeWidth="1.2" />,
       );
-    });
-
-  const partnerLines = relationships
-    .filter((r) => r.type === 'partner')
-    .map((r) => {
-      const from = layout.posById.get(r.fromPersonId);
-      const to = layout.posById.get(r.toPersonId);
-      if (!from || !to) return null;
-      const isEnded = r.subtype === 'divorced' || r.subtype === 'separated';
-      const y = from.y + NODE_H / 2;
-      return (
+    }
+    grp.drops.forEach((d, di) =>
+      lines.push(
         <line
-          key={`pn-${r.id}`}
-          x1={from.x + NODE_W}
-          y1={y}
-          x2={to.x}
-          y2={y}
+          key={`dr-${gi}-${di}`}
+          x1={d.x}
+          y1={grp.busY}
+          x2={d.x}
+          y2={d.topY}
           stroke="#333"
           strokeWidth="1.2"
-          strokeDasharray={isEnded ? '6 4' : undefined}
-        />
-      );
-    });
+          strokeDasharray={d.dashed ? '6 4' : undefined}
+        />,
+      ),
+    );
+    return lines;
+  });
+
+  const partnerLines = partners.flatMap((e) => {
+    const lines = e.segs.map((s, i) => (
+      <line
+        key={`pn-${e.relId}-${i}`}
+        x1={s.x1}
+        y1={s.y1}
+        x2={s.x2}
+        y2={s.y2}
+        stroke="#333"
+        strokeWidth="1.2"
+        strokeDasharray={e.dashed ? '6 4' : undefined}
+      />
+    ));
+    const offsets = e.slashes === 2 ? [-5, 5] : e.slashes === 1 ? [0] : [];
+    offsets.forEach((o, i) =>
+      lines.push(
+        <line key={`sl-${e.relId}-${i}`} x1={e.midX + o - 7} y1={e.midY + 7} x2={e.midX + o + 7} y2={e.midY - 7} stroke="#333" strokeWidth="1.4" />,
+      ),
+    );
+    return lines;
+  });
 
   return (
     <div className="print-only">
