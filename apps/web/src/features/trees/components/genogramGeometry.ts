@@ -3,10 +3,10 @@ import type { PersonDto, RelationshipDto } from '../api/trees.js';
 // ── Dimensiones base del lienzo ──────────────────────────────────────────
 export const NODE_W = 200;
 export const NODE_H = 130;
-export const GAP_X = 64; // separación entre unidades (parejas/solteros) de una generación
-export const GAP_Y = 90; // separación vertical entre generaciones
-export const COUPLE_GAP = 30; // separación entre los dos miembros de una pareja
-export const PAD = 48;
+export const GAP_X = 110; // separación entre unidades (parejas/solteros) de una generación
+export const GAP_Y = 140; // separación vertical entre generaciones
+export const COUPLE_GAP = 44; // separación entre los dos miembros de una pareja
+export const PAD = 56;
 
 export interface Layout {
   generations: Map<number, string[]>;

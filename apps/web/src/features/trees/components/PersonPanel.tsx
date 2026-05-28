@@ -61,6 +61,7 @@ export function PersonPanel({ treeId, person, persons, relationships, onClose }:
       qc.invalidateQueries({ queryKey: ['tree', treeId] });
       onClose();
     },
+    onError: (e) => toast.error((e as { message?: string }).message ?? 'No se pudo eliminar'),
   });
 
   return (

@@ -24,12 +24,15 @@ interface Props {
   onAdd: (relation: Relation) => void;
 }
 
-// Colores por tipo de vínculo
-const C_UNION = '#123F52'; // matrimonio / unión vigente
-const C_INFORMAL = '#42A7A5'; // unión libre / compromiso / adoptivo
-const C_ENDED = '#E0685A'; // separación / divorcio
-const C_BIO = '#123F52'; // filiación biológica
-const C_HILITE = '#42A7A5';
+// ── Paleta por FAMILIA de vínculo (para que se distingan a simple vista) ──
+// Filiación = AZUL PETRÓLEO (sólida biológica · punteada adoptiva/hijastro)
+// Pareja    = TURQUESA      (sólida matrimonio · punteada unión libre)
+// Barras de fin de unión (separación/divorcio) = CORAL
+const C_BIO = '#123F52'; // filiación biológica (línea sólida)
+const C_ADOPT = '#123F52'; // adoptivo / hijastro (misma línea, punteada)
+const C_UNION = '#1FA39A'; // matrimonio / unión vigente
+const C_INFORMAL = '#1FA39A'; // unión libre / compromiso (punteada)
+const C_ENDED = '#E0685A'; // barras de separación / divorcio
 
 function seg(s: Seg, key: string, stroke: string, width: number, dashed?: boolean, dim?: boolean) {
   return (
@@ -175,18 +178,17 @@ export function GenogramView({ persons, relationships, linkMode, onSelectAsTarge
               {edges.childGroups.map((grp, gi) => {
                 const dim = dimEdge(grp.touches);
                 const live = liveEdge(grp.touches);
-                const stem = C_BIO;
-                const w = live ? 2.6 : 1.7;
+                const w = live ? 3.4 : 2.4;
                 return (
                   <g key={`cg-${gi}`}>
-                    {seg({ x1: grp.anchorX, y1: grp.anchorY, x2: grp.anchorX, y2: grp.busY }, `st-${gi}`, stem, w, false, dim)}
+                    {seg({ x1: grp.anchorX, y1: grp.anchorY, x2: grp.anchorX, y2: grp.busY }, `st-${gi}`, C_BIO, w, false, dim)}
                     {grp.barX2 > grp.barX1 &&
-                      seg({ x1: grp.barX1, y1: grp.busY, x2: grp.barX2, y2: grp.busY }, `bar-${gi}`, stem, w, false, dim)}
+                      seg({ x1: grp.barX1, y1: grp.busY, x2: grp.barX2, y2: grp.busY }, `bar-${gi}`, C_BIO, w, false, dim)}
                     {grp.drops.map((d, di) =>
                       seg(
                         { x1: d.x, y1: grp.busY, x2: d.x, y2: d.topY },
                         `dr-${gi}-${di}`,
-                        d.dashed ? C_INFORMAL : C_BIO,
+                        d.dashed ? C_ADOPT : C_BIO,
                         w,
                         d.dashed,
                         dim,
@@ -200,8 +202,8 @@ export function GenogramView({ persons, relationships, linkMode, onSelectAsTarge
               {edges.partners.map((e) => {
                 const dim = dimEdge(e.touches);
                 const live = liveEdge(e.touches);
-                const color = live ? C_HILITE : e.ended ? C_ENDED : e.dashed ? C_INFORMAL : C_UNION;
-                const w = live ? 2.8 : 2;
+                const color = e.dashed ? C_INFORMAL : C_UNION;
+                const w = live ? 3.6 : 2.6;
                 return (
                   <g key={`pe-${e.relId}`}>
                     {e.segs.map((s, i) => seg(s, `pe-${e.relId}-${i}`, color, w, e.dashed, dim))}
@@ -247,7 +249,7 @@ export function GenogramView({ persons, relationships, linkMode, onSelectAsTarge
       <div className="border-t border-paper-300 bg-paper-100 px-4 py-2">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[9px] uppercase tracking-widest text-ink-500">
           <LegendLine color={C_BIO} label="Filiación" />
-          <LegendLine color={C_INFORMAL} dashed label="Adoptivo / hijastro" />
+          <LegendLine color={C_ADOPT} dashed label="Adoptivo / hijastro" />
           <LegendLine color={C_UNION} label="Matrimonio" />
           <LegendLine color={C_INFORMAL} dashed label="Unión libre" />
           <LegendSlash count={1} label="Separación" />
@@ -276,9 +278,9 @@ function Slashes({ x, y, count, color }: { x: number; y: number; count: 1 | 2; c
 
 function LegendLine({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
   return (
-    <span className="flex items-center gap-1.5">
-      <svg width="22" height="6">
-        <line x1="0" y1="3" x2="22" y2="3" stroke={color} strokeWidth="2" strokeDasharray={dashed ? '5 4' : undefined} />
+    <span className="flex items-center gap-2">
+      <svg width="30" height="10" className="shrink-0">
+        <line x1="1" y1="5" x2="29" y2="5" stroke={color} strokeWidth="3" strokeLinecap="round" strokeDasharray={dashed ? '6 4' : undefined} />
       </svg>
       {label}
     </span>
@@ -287,11 +289,11 @@ function LegendLine({ color, label, dashed }: { color: string; label: string; da
 
 function LegendSlash({ count, label }: { count: 1 | 2; label: string }) {
   return (
-    <span className="flex items-center gap-1.5">
-      <svg width="22" height="12">
-        <line x1="0" y1="6" x2="22" y2="6" stroke={C_ENDED} strokeWidth="2" />
-        {(count === 2 ? [8, 14] : [11]).map((cx, i) => (
-          <line key={i} x1={cx - 4} y1="11" x2={cx + 4} y2="1" stroke={C_ENDED} strokeWidth="2" />
+    <span className="flex items-center gap-2">
+      <svg width="30" height="14" className="shrink-0">
+        <line x1="1" y1="7" x2="29" y2="7" stroke={C_UNION} strokeWidth="3" strokeLinecap="round" />
+        {(count === 2 ? [11, 19] : [15]).map((cx, i) => (
+          <line key={i} x1={cx - 5} y1="13" x2={cx + 5} y2="1" stroke={C_ENDED} strokeWidth="2.6" strokeLinecap="round" />
         ))}
       </svg>
       {label}
@@ -372,18 +374,18 @@ function PersonNode({
         </div>
       </button>
 
-      {/* Botones de agregar familiar */}
-      <div className="absolute -top-3 left-1/2 z-40 flex -translate-x-1/2 gap-1 opacity-0 transition group-hover:opacity-100">
+      {/* Botones de agregar familiar — alrededor de la tarjeta */}
+      <div className="absolute -top-6 left-1/2 z-40 flex -translate-x-1/2 gap-2 opacity-0 transition group-hover:opacity-100">
         <AddDot label="Padre" onClick={(e) => add(e, { kind: 'father', child: person })} />
         <AddDot label="Madre" onClick={(e) => add(e, { kind: 'mother', child: person })} />
       </div>
-      <div className="absolute -bottom-3 left-1/2 z-40 -translate-x-1/2 opacity-0 transition group-hover:opacity-100">
+      <div className="absolute -bottom-6 left-1/2 z-40 -translate-x-1/2 opacity-0 transition group-hover:opacity-100">
         <AddDot label="Hijo/a" onClick={(e) => add(e, { kind: 'child', parent: person })} />
       </div>
-      <div className="absolute top-1/2 -left-1 z-40 -translate-x-full -translate-y-1/2 pr-1 opacity-0 transition group-hover:opacity-100">
+      <div className="absolute top-1/2 -left-3 z-40 -translate-x-full -translate-y-1/2 opacity-0 transition group-hover:opacity-100">
         <AddDot label="Hermano/a" onClick={(e) => add(e, { kind: 'sibling', of: person })} />
       </div>
-      <div className="absolute top-1/2 -right-1 z-40 translate-x-full -translate-y-1/2 pl-1 opacity-0 transition group-hover:opacity-100">
+      <div className="absolute top-1/2 -right-3 z-40 translate-x-full -translate-y-1/2 opacity-0 transition group-hover:opacity-100">
         <AddDot label="Pareja" onClick={(e) => add(e, { kind: 'partner', of: person })} />
       </div>
     </div>
