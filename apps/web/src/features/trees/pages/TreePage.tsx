@@ -189,10 +189,6 @@ export function TreePage() {
                   if (p) setOpenPerson(p);
                 }}
                 onAdd={setQuickAdd}
-                onDelete={(personId) => {
-                  const p = tree.persons.find((x) => x.id === personId);
-                  if (p) setOpenPerson(p);
-                }}
               />
             )}
 

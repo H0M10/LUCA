@@ -8,7 +8,6 @@ interface Props {
   relationships: RelationshipDto[];
   linkMode: null | { from: string; type: 'parent' | 'partner' };
   onSelectAsTarget: (id: string) => void;
-  onDelete: (id: string) => void;
   onSelect: (id: string) => void;
   onAdd: (relation: Relation) => void;
 }
@@ -103,7 +102,6 @@ export function GenogramView({
   relationships,
   linkMode,
   onSelectAsTarget,
-  onDelete,
   onSelect,
   onAdd,
 }: Props) {
@@ -332,7 +330,6 @@ export function GenogramView({
                   dimmed={!!hovered && !connected.has(p.id)}
                   onHover={() => setHovered(p.id)}
                   onSelectAsTarget={() => onSelectAsTarget(p.id)}
-                  onDelete={() => onDelete(p.id)}
                   onSelect={() => onSelect(p.id)}
                   onAdd={onAdd}
                 />
@@ -375,7 +372,6 @@ function PersonNode({
   dimmed,
   onHover,
   onSelectAsTarget,
-  onDelete,
   onSelect,
   onAdd,
 }: {
@@ -385,20 +381,14 @@ function PersonNode({
   dimmed: boolean;
   onHover: () => void;
   onSelectAsTarget: () => void;
-  onDelete: () => void;
   onSelect: () => void;
   onAdd: (relation: Relation) => void;
 }) {
   const dead = !!person.deathDate;
-  const [menu, setMenu] = useState(false);
-
-  const addOptions: Array<{ label: string; rel: Relation }> = [
-    { label: '↑ Padre', rel: { kind: 'father', child: person } },
-    { label: '↑ Madre', rel: { kind: 'mother', child: person } },
-    { label: '↔ Pareja', rel: { kind: 'partner', of: person } },
-    { label: '↓ Hijo/a', rel: { kind: 'child', parent: person } },
-    { label: '↔ Hermano/a', rel: { kind: 'sibling', of: person } },
-  ];
+  const add = (e: React.MouseEvent, rel: Relation) => {
+    e.stopPropagation();
+    onAdd(rel);
+  };
 
   return (
     <div
@@ -421,15 +411,11 @@ function PersonNode({
       />
 
       {isTarget && (
-        <button
-          onClick={onSelectAsTarget}
-          className="absolute inset-0 z-10"
-          aria-label="Seleccionar como objetivo"
-        />
+        <button onClick={onSelectAsTarget} className="absolute inset-0 z-10" aria-label="Seleccionar como objetivo" />
       )}
 
       {/* Body — abre el panel de la persona (ver/editar/eliminar/salud) */}
-      <button onClick={onSelect} className="flex flex-1 cursor-pointer items-center gap-3 px-3 py-3 text-left">
+      <button onClick={onSelect} className="flex flex-1 cursor-pointer items-center gap-3 px-3 pb-3 pt-2 text-left">
         <PersonAvatar person={person} size={44} />
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-display text-[15px] font-medium leading-tight text-ink-900 group-hover:text-moss-700">
@@ -456,40 +442,38 @@ function PersonNode({
         </div>
       </button>
 
-      {/* Acciones — visibles al hover */}
-      <div className="relative z-20 flex rounded-b-2xl border-t border-paper-200 text-[10px] opacity-0 transition group-hover:opacity-100">
-        <button
-          onClick={(e) => { e.stopPropagation(); setMenu((m) => !m); }}
-          className="flex-1 rounded-bl-2xl px-2 py-1.5 font-sans font-semibold text-moss-700 transition hover:bg-moss-50"
-          title="Agregar familiar"
-        >
-          + Agregar familiar
-        </button>
-        <span className="w-px bg-paper-200" />
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="rounded-br-2xl px-3 py-1.5 font-sans font-medium text-clay-600 transition hover:bg-clay-100"
-          title="Eliminar / editar en el panel"
-        >
-          ⋯
-        </button>
+      {/* Botones de agregar familiar — posicionados alrededor (aparecen al hover) */}
+      {/* Arriba: padres */}
+      <div className="absolute -top-3 left-1/2 z-40 flex -translate-x-1/2 gap-1 opacity-0 transition group-hover:opacity-100">
+        <AddDot label="Padre" onClick={(e) => add(e, { kind: 'father', child: person })} />
+        <AddDot label="Madre" onClick={(e) => add(e, { kind: 'mother', child: person })} />
       </div>
-
-      {/* Menú de agregar familiar */}
-      {menu && (
-        <div className="absolute left-1/2 top-full z-40 mt-1 w-44 -translate-x-1/2 overflow-hidden rounded-xl border border-paper-300 bg-white shadow-paper-lg animate-scale-in">
-          {addOptions.map((o) => (
-            <button
-              key={o.label}
-              onClick={(e) => { e.stopPropagation(); setMenu(false); onAdd(o.rel); }}
-              className="block w-full px-4 py-2 text-left font-sans text-xs text-ink-700 transition hover:bg-moss-50 hover:text-moss-700"
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Abajo: hijos */}
+      <div className="absolute -bottom-3 left-1/2 z-40 -translate-x-1/2 opacity-0 transition group-hover:opacity-100">
+        <AddDot label="Hijo/a" onClick={(e) => add(e, { kind: 'child', parent: person })} />
+      </div>
+      {/* Izquierda: hermanos */}
+      <div className="absolute top-1/2 -left-1 z-40 -translate-x-full -translate-y-1/2 pr-1 opacity-0 transition group-hover:opacity-100">
+        <AddDot label="Hermano/a" onClick={(e) => add(e, { kind: 'sibling', of: person })} />
+      </div>
+      {/* Derecha: pareja */}
+      <div className="absolute top-1/2 -right-1 z-40 translate-x-full -translate-y-1/2 pl-1 opacity-0 transition group-hover:opacity-100">
+        <AddDot label="Pareja" onClick={(e) => add(e, { kind: 'partner', of: person })} />
+      </div>
     </div>
+  );
+}
+
+/** Botón-píldora "+ etiqueta" para agregar un familiar en una dirección. */
+function AddDot({ label, onClick }: { label: string; onClick: (e: React.MouseEvent) => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="whitespace-nowrap rounded-full border border-moss-700 bg-white px-2 py-0.5 font-sans text-[10px] font-semibold text-moss-700 shadow-paper transition hover:bg-moss-700 hover:text-white"
+      title={`Agregar ${label.toLowerCase()}`}
+    >
+      + {label}
+    </button>
   );
 }
 
